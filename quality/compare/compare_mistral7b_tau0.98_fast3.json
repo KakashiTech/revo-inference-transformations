@@ -1,0 +1,30 @@
+{
+  "model": "llama.cpp:mistral-7b-v0.1.Q4_K_M.gguf",
+  "seeds": [
+    0
+  ],
+  "prompts": 3,
+  "max_length": 64,
+  "variants": [
+    {
+      "name": "baseline",
+      "nll_general": 4.119348764419556,
+      "nll_ood": 4.076927661895752,
+      "recon_cos": 1.0,
+      "recon_kl": 0.0,
+      "stability_cos": 1.0,
+      "stability_kl": 0.0,
+      "eval_time_s": 16.685899682001036
+    },
+    {
+      "name": "revo(tau=0.98)",
+      "nll_general": 4.119348764419556,
+      "nll_ood": 4.076927661895752,
+      "recon_cos": 1.0000000198682149,
+      "recon_kl": 0.0,
+      "stability_cos": 0.999999980131785,
+      "stability_kl": 0.0,
+      "eval_time_s": 29.872007461000976
+    }
+  ]
+}

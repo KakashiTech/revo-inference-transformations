@@ -1,6 +1,10 @@
 # REVO — Research Prototype (CPU‑only)
 REVO explores inference-time transformations that reshape activation dynamics without modifying model weights.
 
+Status: early research prototype.
+Current focus: CPU-only inference-time calibration and measurement.
+Artifacts included are small, reproducible sanity checks — not benchmarks.
+
 Research prototype, not a drop‑in optimizer.
 
 This repo anchors the legitimacy of REVO as a technical line of work. It includes CPU‑only evidence, JSON artifacts, and lightweight commands to reproduce small checks. No release yet.
@@ -41,6 +45,17 @@ Alignment‑check (mismo punto del grafo, GPT‑2): `quality/compare/alignment_s
 - Hook `transformer.ln_f`: norma L2 hidden (baseline→REVO) ≈ 231.6 → 91.4; dif L2 logits ≈ 12.46k.
 - Confirma modulación/reescalado interno sin depender de cuantización.
 
+## Minimal reproducible artifacts (CPU-only)
+
+This repo intentionally includes only a few small JSON artifacts.
+They exist to prove the effect is real, measurable, and reproducible — not to win benchmarks.
+
+Included:
+- GPT-2 (HF, CPU): baseline vs REVO calibration (NLL / latency / stability)
+- Mistral-7B (GGUF, llama.cpp, CPU): baseline vs REVO (tau calibration only)
+
+Artifacts live under `quality/compare/`.
+
 ## Reproducir (ligero, CPU‑only)
 ```bash
 # Comparativo ligero (gpt2, 1 seed, 20 prompts)
@@ -54,6 +69,24 @@ PYTHONPATH=. python examples/compare_revo_vs_qp.py \
   --alignment-check --hook-module transformer.ln_f \
   --alignment-results quality/compare/alignment_gpt2_ln_f.json
 ```
+
+## llama.cpp (opcional, ya preparado)
+Soporta GGUF y calibración probabilística con `tau` vía `--llama-tau`. Ejecución ligera recomendada:
+
+```bash
+PYTHONPATH=. python examples/compare_revo_vs_qp.py \
+  --llama-gguf models/gguf/mistral-7b-v0.1.Q4_K_M.gguf \
+  --seeds 0 --prompts 10 --max-length 64 \
+  --llama-n-ctx 2048 --llama-topk 50 --llama-tau 0.98 \
+  --results-json quality/compare/compare_mistral7b_tau0.98.json
+```
+
+Note:
+Current llama.cpp results demonstrate probabilistic calibration and runtime behavior only.
+Graph-level compute reduction (gating / early-exit / low-rank) is implemented and measured
+in the HF/PyTorch path.
+
+Next step: validate the same ideas on very low-memory laptops (≤4 GB RAM).
 
 ---
 
