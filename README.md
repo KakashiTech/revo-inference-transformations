@@ -2,7 +2,7 @@
 
 REVO explores inference-time transformations that reshape activation dynamics without modifying model weights.
 
-**Status:** research prototype — 9 phases implemented, CPU-only, 41 tests (pytest), reproducible artifacts under `quality/`.
+**Status:** research prototype — 9 phases implemented, CPU-only, 43 tests (pytest), CI via GitHub Actions. All modules verified importable.
 
 ---
 
@@ -32,6 +32,15 @@ revo/
 ├── potentials.py          # Potential logging (JSONL with rotation)
 ├── observability.py       # Identity anchor and cognitive conservation logging
 │
+├── _logging.py            # Centralised logging configuration
+├── _utils.py              # Shared utilities (seed, NLL, module iteration)
+├── engine.py              # Low-rank delta apply/revert (NumPy)
+├── hyperlora.py           # Deterministic context to (A, B, scale) generation
+├── features.py            # Feature extraction, context vectors, mode keys
+├── mode_cache.py          # TTL/LRU mode cache (thread-safe)
+├── potentials.py          # Potential logging (JSONL with rotation)
+├── observability.py       # Identity anchor and cognitive conservation logging
+│
 ├── metric_field_pinn.py   # [I.1] PDE-regularised latent metric field
 ├── energy.py              # [I.2] EnergyMonitor, RAPL, Landauer calibration
 ├── hdram.py               # [I.3] Associative memory via cosine similarity
@@ -41,7 +50,7 @@ revo/
 ├── holography.py          # [II] HoloBoundaryAdapter + PINN calibration
 ├── hora.py                # [II] Hyperbolic low-rank adaptation
 ├── hyperbolic.py          # Poincare disk geometry (expmap, logmap, mobius)
-├── beds.py                # [II.1] Bayesian Ephemeral Delta Synthesis
+├── bayesian_delta.py      # [II.1] Bayesian Ephemeral Delta Synthesis
 ├── tqft.py                # [II.2] Topological protection via FFT phase
 ├── category.py            # [II.3] Category-theoretic morphism DSL
 ├── radix_cache.py         # [II.4] Prefix-tree associative cache
@@ -51,18 +60,31 @@ revo/
 ├── phase_bus.py           # [III] FFT phase alignment wrapper
 ├── reversible.py          # [III] SVD-based reversible un-computing
 ├── wdm.py                 # [III] Block-diagonal circulant band split
+├── oscillatory_gating.py  # [III] Oscillatory phase-gated modulation
 │
 ├── fractal.py             # [IV] Power-series linear wrap
 ├── ephemeral.py           # [IV] Sigmoid-gated modulation
 ├── radix.py               # [IV] Radix tree evaluation
+├── hyperbolic_gating.py   # [IV] Hyperbolic gating + profile
 │
-├── layer_profile.py       # Layer profiling for rank allocation
-├── lowrank.py             # Low-rank module replacement
-├── calibration.py         # Post-REVO head calibration
-├── physical_onn.py        # Optical neural network emulation
-├── true_holomorphic.py    # Holomorphic (complex) linear transforms
-├── true_reversible.py     # Reversible + adiabatic pipeline
-├── true_pdm.py            # Probabilistic delta modulation
+├── spectral_network.py    # [V] Cauchy / spectral network transforms
+├── equilibrium_propagation.py  # [V] Equilibrium propagation tuning
+├── functor_monte_carlo.py # [V] Functor mapping verification
+├── tensor_train.py        # [V] Tensor-train / MPO decomposition
+├── holomorphic_projection.py   # [V] Holomorphic model projection
+├── mutual_information_fusion.py # [V] MI-based output fusion
+├── latency_monitor.py     # [V] Latency distribution measurement
+├── probabilistic_delta.py # [V] Probabilistic delta modulation
+├── low_dimensional.py     # [V] Low-dimensional consolidation
+├── lowrank.py             # [V] Low-rank module replacement
+├── calibration.py         # [V] Post-REVO head calibration
+├── physical_onn.py        # [V] Optical neural network emulation
+├── true_holomorphic.py    # [V] Holomorphic (complex) linear transforms
+├── true_reversible.py     # [V] Reversible + adiabatic pipeline
+├── true_pdm.py            # [V] Probabilistic delta modulation
+├── layer_profile.py       # [V] Layer profiling for rank allocation
+├── morse.py               # [V] Morse-skeleton weight sparsification
+├── holomorphic.py         # [V] Holomorphic weight replacement
 │
 ├── regimes.py             # [VI] Regime detection (micro/macro)
 ├── probcal.py             # [VII] Temperature scaling (tau) via SGD
@@ -73,7 +95,7 @@ revo/
 └── unified_main.py        # Unified CLI entry point for all phases
 
 examples/              # Runnable benchmarks and tests (15 scripts)
-tests/                 # 41 pytest tests across 5 suites
+tests/                 # 43 pytest tests across 6 suites
 quality/               # JSON artifacts (phase runs, comparisons, reports)
 ```
 

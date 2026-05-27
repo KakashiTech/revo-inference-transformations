@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -80,17 +81,17 @@ class ReversibleUncomputeWrap(nn.Module):
                     try:
                         DecomputeManager.force_trim()
                     except Exception:
-                        pass
+                        get_logger().warning("except Exception:")
                     return grad
                 out.register_hook(_trim_hook)
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         # Optional immediate decomputation trimming
         try:
             if DecomputeManager.enabled:
                 DecomputeManager.maybe_trim()
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         return out
 
 
@@ -127,27 +128,24 @@ class DecomputeManager:
         try:
             gc.collect()
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         try:
             libc = ctypes.CDLL("libc.so.6")
             libc.malloc_trim(0)
         except Exception:
-            pass
-
+            get_logger().warning("except Exception:")
     @staticmethod
     def force_trim() -> None:
         """Force an immediate trim regardless of interval."""
         try:
             gc.collect()
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         try:
             libc = ctypes.CDLL("libc.so.6")
             libc.malloc_trim(0)
         except Exception:
-            pass
-
-
+            get_logger().warning("except Exception:")
 @torch.no_grad()
 def replace_with_reversible(
     model: nn.Module,
@@ -198,7 +196,7 @@ def replace_with_reversible(
             if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         wrapper = ReversibleUncomputeWrap(m, rank=rank, device=m.weight.device, dtype=m.weight.dtype)
         set_by_name(model, name, wrapper)
         report[name] = (int(wrapper.in_features), int(wrapper.out_features), int(wrapper.rank))

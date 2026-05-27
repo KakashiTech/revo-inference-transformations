@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 import os
 import json
@@ -40,8 +41,7 @@ class ModeCache:
                 with open(self.log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(obj, ensure_ascii=False) + "\n")
         except Exception:
-            pass
-
+            get_logger().warning("except Exception:")
     def _evict_if_needed(self) -> None:
         with self._lock:
             if len(self._cache) < int(self.max_size):

@@ -30,7 +30,7 @@ def _orient_weight_bias(module: nn.Module) -> Tuple[torch.Tensor, Optional[torch
     return W_det, b_det, int(W_det.shape[1]), int(W_det.shape[0]), False
 
 
-class CauchyLinearLike(nn.Module):
+class SpectralLinearLike(nn.Module):
     def __init__(self, base: nn.Module, rank: int = 4):
         super().__init__()
         W_o, b_o, in_f, out_f, _ = _orient_weight_bias(base)
@@ -78,7 +78,7 @@ def _set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:
         setattr(parent, last, new_mod)
 
 
-def replace_mlp_with_cauchy(
+def replace_mlp_with_spectral(
     model: nn.Module,
     rank: int = 4,
     name_patterns: Optional[List[str]] = None,
@@ -105,7 +105,7 @@ def replace_mlp_with_cauchy(
         orig = out_f * in_f + (out_f if getattr(m, "bias", None) is not None else 0)
         coeff = r * (in_f + out_f + 1) + (out_f if getattr(m, "bias", None) is not None else 0)
         try:
-            wrapper = CauchyLinearLike(m, rank=r)
+            wrapper = SpectralLinearLike(m, rank=r)
             _set_by_name(model, name, wrapper)
             modules += 1
             orig_params += orig

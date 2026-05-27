@@ -17,7 +17,7 @@ from revo.lowrank import replace_2d_modules_with_lowrank
 # Phase II (custom Phase II modules and protections)
 from revo.hora import replace_with_hora
 from revo.holography import replace_with_holography, calibrate_holo_pinn
-from revo.beds import evaluate_beds, BEDSConfig
+from revo.bayesian_delta import evaluate_beds, BEDSConfig
 from revo.tqft import evaluate_tqft, TQFTConfig
 from revo.category import evaluate_category
 from revo.radix_cache import evaluate_radix, RadixConfig
@@ -34,7 +34,7 @@ from revo.ephemeral import replace_with_ephemeral, calibrate_ephemeral
 from revo.radix import radix_eval_nll
 # Phase V
 from revo.energy import measure_energy
-from revo.mei_sync import measure_latency_distribution
+from revo.latency_monitor import measure_latency_distribution
 from revo.mlir_kernels import compile_model_guarded
 # Final Phases (VI–IX)
 from revo.regimes import evaluate_regimes, RegimeConfig

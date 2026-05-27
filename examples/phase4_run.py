@@ -15,7 +15,7 @@ from revo._utils import count_parameters, evaluate_nll, free_memory_trim, measur
 from revo.fractal import replace_with_fractal
 from revo.ephemeral import replace_with_ephemeral, calibrate_ephemeral
 from revo.radix import radix_eval_nll
-from revo.phase4 import solomonoff_mixed_nll, compositional_consistency, hyperbolic_profile, mdl_surrogate_nll
+from revo.hyperbolic_gating import solomonoff_mixed_nll, compositional_consistency, hyperbolic_profile, mdl_surrogate_nll
 
 
 def _texts_default() -> List[str]:

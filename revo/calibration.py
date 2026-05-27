@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import List, Optional
 
@@ -47,7 +48,7 @@ def wrap_lm_head_with_calib(model: nn.Module) -> Optional[str]:
                     _set_by_name(model, name, LogitCalibWrap(m))
                     return name
     except Exception:
-        pass
+        get_logger().warning("except Exception:")
     return None
 
 

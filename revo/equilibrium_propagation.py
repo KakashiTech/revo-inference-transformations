@@ -5,7 +5,7 @@ from typing import Dict, List
 import torch
 import torch.nn as nn
 
-from revo.phase3 import OscillatoryHooks
+from revo.oscillatory_gating import OscillatoryHooks
 
 
 @torch.enable_grad()

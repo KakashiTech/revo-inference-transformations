@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional
 
@@ -79,8 +80,7 @@ class HolomorphicFourierLinearLike(nn.Module):
                     coeffs[idx] = (num / den)
                 self.coeffs.copy_(coeffs.to(device=dev, dtype=torch.float32))
         except Exception:
-            pass
-
+            get_logger().warning("except Exception:")
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         orig_shape = x.shape
         x2 = x.view(-1, orig_shape[-1])  # [N, in]

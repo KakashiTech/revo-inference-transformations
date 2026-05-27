@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, Any, Tuple
 
@@ -80,7 +81,7 @@ def adjust_ranks_geodesic(profile: Dict[str, Dict[str, Any]],
             try:
                 ent_vals.append(float(p.get("entropy_norm", 0.0)))
             except Exception:
-                pass
+                get_logger().warning("except Exception:")
     if not ent_vals:
         return dict(base_ranks)
     ent_vals = np.asarray(ent_vals, dtype=np.float64)

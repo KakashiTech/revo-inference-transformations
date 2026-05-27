@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -62,7 +63,7 @@ def mi_fuse_outputs(
                         y = y.view(-1, y.shape[-1])
                     buffers[name].append(y)
             except Exception:
-                pass
+                get_logger().warning("except Exception:")
         return fn
 
     for n, m in wanted.items():
@@ -81,8 +82,7 @@ def mi_fuse_outputs(
         try:
             h.remove()
         except Exception:
-            pass
-
+            get_logger().warning("except Exception:")
     report: Dict[str, Dict[str, int]] = {}
     for name, parts in buffers.items():
         if not parts:

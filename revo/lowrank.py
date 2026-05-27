@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from dataclasses import dataclass
 from typing import Dict, Tuple, Any
@@ -302,7 +303,7 @@ def replace_2d_modules_with_lowrank(
             if (input_embed_weight is not None) and (W is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         if non_increase_params:
             out_f, in_f = int(W.shape[0]), int(W.shape[1])
             thr = max(1, (out_f * in_f) // (out_f + in_f))

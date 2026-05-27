@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -94,7 +95,7 @@ def consolidate_lowdim(
                         x = x.view(-1, x.shape[-1])
                     buffers[name].append(x)
             except Exception:
-                pass
+                get_logger().warning("except Exception:")
         return fn
 
     for n, m in wanted.items():
@@ -113,8 +114,7 @@ def consolidate_lowdim(
         try:
             h.remove()
         except Exception:
-            pass
-
+            get_logger().warning("except Exception:")
     report: Dict[str, Tuple[int, int, int]] = {}
 
     def _set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:

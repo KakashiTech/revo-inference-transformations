@@ -14,7 +14,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from revo._utils import count_parameters, evaluate_nll, free_memory_trim, measure_memory_rss
 from revo.layer_profile import profile_model_2d, allocate_ranks_energy_with_caps
 from revo.lowrank import replace_2d_modules_with_lowrank
-from revo.xtr_phase1 import holomorphic_project_model, adjust_ranks_geodesic
+from revo.holomorphic_projection import holomorphic_project_model, adjust_ranks_geodesic
 
 
 def _texts_default() -> List[str]:

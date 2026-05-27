@@ -311,7 +311,7 @@ def replace_with_true_reversible(
                 if module.bias is not None:
                     new_layer.bias.data = module.bias.data.clone()
             except Exception:
-                pass  # Keep random init if SVD fails
+                from revo._logging import get_logger; get_logger().warning("SVD decomposition failed: using random init")  # type: ignore[unused-ignore]
         
         # Replace
         parent_name = '.'.join(name.split('.')[:-1]) if '.' in name else ''

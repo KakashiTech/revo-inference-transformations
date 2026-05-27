@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -127,7 +128,7 @@ def replace_with_holography(
             if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         adapter = HoloBoundaryAdapter(m, boundary_dim=boundary_dim, alpha=alpha, device=m.weight.device, dtype=m.weight.dtype)
         set_by_name(model, name, adapter)
         # Infer in/out for report via helper

@@ -1,5 +1,6 @@
 """PhaseRunner: consolidated pipeline orchestrator for REVO Phases I-V."""
 from __future__ import annotations
+from revo._logging import get_logger
 
 import argparse
 import importlib
@@ -55,7 +56,7 @@ class PhaseRunner:
                 ep.compute_curvature(model, embeddings)
                 return _pr("phase1_metric_field", base, _em(model, tokenizer, texts or [], max_len))
             except Exception:
-                pass
+                get_logger().warning("except Exception:")
         lp, lr = _try("revo.layer_profile"), _try("revo.lowrank")
         if lp is None or lr is None:
             return {"name": "phase1_metric_field", "status": "skipped"}

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -113,7 +114,7 @@ def replace_with_fractal(
             if (input_embed_weight is not None) and (W is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         # Require square mapping
         W_o, b_o, in_f, out_f = _orient_weight_bias(m)
         if in_f != out_f:

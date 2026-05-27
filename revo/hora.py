@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -116,7 +117,7 @@ def replace_with_hora(
             if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         # Build adapter with inferred dims and replace
         W_o, b_o, in_f, out_f = _infer_oriented_weight(m)
         adapter = HoRALinearAdapter(m, rank=rank, alpha=alpha, c=c, device=W_o.device, dtype=W_o.dtype)

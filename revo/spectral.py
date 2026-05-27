@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Tuple
 
@@ -74,7 +75,7 @@ def prune_model_spectral(
             if (input_embed_weight is not None) and (W is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         Y, kept, total = spectral_prune_tensor(W, energy_keep=energy_keep)
         orig_norm = float(W.detach().norm().item())
         setattr(m, "weight", nn.Parameter(Y.to(device=W.device, dtype=W.dtype), requires_grad=False))

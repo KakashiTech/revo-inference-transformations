@@ -16,22 +16,22 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from revo._utils import count_parameters, free_memory_trim, measure_memory_rss
 
 from revo.energy import measure_energy, DEFAULT_T_K
-from revo.mei_sync import measure_latency_distribution
+from revo.latency_monitor import measure_latency_distribution
 from revo.mlir_kernels import compile_model_guarded
 from revo.reversible import replace_with_reversible, calibrate_reversible, calibrate_reversible_mdl, DecomputeManager
-from revo.pdm import pdm_eval_lm_head
-from revo.functor_mc import verify_functor_mapping
-from revo.cauchynet import replace_mlp_with_cauchy
+from revo.probabilistic_delta import pdm_eval_lm_head
+from revo.functor_monte_carlo import verify_functor_mapping
+from revo.spectral_network import replace_mlp_with_spectral
 from revo.morse import morse_skeletonize
-from revo.eqprop import equilibrium_propagation_tune
+from revo.equilibrium_propagation import equilibrium_propagation_tune
 from revo.holomorphic import replace_mlp_with_holomorphic, calibrate_holomorphic
-from revo.phase4 import (
+from revo.hyperbolic_gating import (
     solomonoff_mixed_nll,
     compositional_consistency,
     hyperbolic_profile,
     mdl_surrogate_nll,
 )
-from revo.phase3 import (
+from revo.oscillatory_gating import (
     OscillatoryHooks,
     interference_metrics,
     oscillatory_bptt_tune,
@@ -328,7 +328,7 @@ def main() -> None:
     # Then Phase 1 (Cauchy) to compress MLP-like layers
     if args.use_cauchy:
         try:
-            cauchy_report = replace_mlp_with_cauchy(
+            spectral_report = replace_mlp_with_spectral(
                 model_mod,
                 rank=int(args.cauchy_rank),
                 name_patterns=cauchy_patterns,

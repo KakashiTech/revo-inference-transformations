@@ -29,7 +29,7 @@ from revo.ephemeral import replace_with_ephemeral, calibrate_ephemeral
 from revo.radix import radix_eval_nll
 # Phase V
 from revo.energy import measure_energy
-from revo.mei_sync import measure_latency_distribution
+from revo.latency_monitor import measure_latency_distribution
 from revo.mlir_kernels import compile_model_guarded
 
 

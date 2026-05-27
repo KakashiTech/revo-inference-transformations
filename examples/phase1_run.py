@@ -18,7 +18,7 @@ from revo.layer_profile import (
     allocate_ranks_energy_with_caps,
 )
 from revo.lowrank import replace_linear_with_lowrank
-from revo.tt_mpo import replace_linear_with_tt2
+from revo.tensor_train import replace_linear_with_tt2
 
 
 def _texts_default() -> List[str]:

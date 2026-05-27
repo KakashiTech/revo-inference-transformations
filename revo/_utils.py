@@ -3,6 +3,7 @@
 Consolidates duplicated functions across the codebase.
 """
 from __future__ import annotations
+from revo._logging import get_logger
 
 import gc
 import json
@@ -234,4 +235,4 @@ def free_memory_trim() -> None:
         libc = ctypes.CDLL("libc.so.6")
         libc.malloc_trim(0)
     except Exception:
-        pass
+        get_logger().warning("except Exception:")

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -128,7 +129,7 @@ def replace_with_circulant(
             if (input_embed_weight is not None) and (W is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         # Infer in/out and require square effective mapping
         in_f, out_f = _infer_in_out_from_weight(m)
         if in_f != out_f:

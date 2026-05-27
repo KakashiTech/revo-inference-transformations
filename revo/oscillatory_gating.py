@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 import math
 from typing import Dict, List, Optional, Tuple
@@ -72,7 +73,7 @@ class OscillatoryHooks:
             try:
                 h.remove()
             except Exception:
-                pass
+                get_logger().warning("except Exception:")
         self._hooks.clear()
         self._modules.clear()
         self._phases.clear()

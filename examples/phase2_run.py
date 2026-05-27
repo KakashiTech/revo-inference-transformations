@@ -15,8 +15,8 @@ from revo._utils import count_parameters, evaluate_nll, free_memory_trim, measur
 from revo.hora import replace_with_hora
 from revo.holography import replace_with_holography, calibrate_holo_pinn
 from revo.morse import morse_skeletonize
-from revo.mi_fusion import mi_fuse_outputs
-from revo.lowdim import consolidate_lowdim
+from revo.mutual_information_fusion import mi_fuse_outputs
+from revo.low_dimensional import consolidate_lowdim
 
 
 def _texts_default() -> List[str]:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from revo._logging import get_logger
 
 from typing import Dict, List, Optional, Tuple
 
@@ -83,7 +84,7 @@ def replace_with_ephemeral(
             if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
-            pass
+            get_logger().warning("except Exception:")
         g_init = gamma_init_map.get(name) if gamma_init_map is not None else None
         wrapper = ResonanceGateWrap(m, device=m.weight.device, dtype=m.weight.dtype, gamma_init=g_init)
         set_by_name(model, name, wrapper)
