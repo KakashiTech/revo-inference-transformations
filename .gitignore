@@ -1,0 +1,42 @@
+# General
+.DS_Store
+*.log
+*.tmp
+*.swp
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+
+# Outputs
+logs/
+quality/
+
+# Model weights (large binary files)
+models/
+
+# Generated / temp
+revo_compute.egg-info/
+.pytest_cache/
+.benchmarks/
+.venv/
+checklist.md
+
+# Embedded git anchor
+.revo_anchor/
+
+# Research notes (not part of the public prototype)
+GRH.md
+
+# Backup files
+*_bak
+*.bak
+
+# Design docs (not part of the public prototype)
+docs/REVO_COMPUTE.md
+docs/adr/
+docs/EXTREME_REVO_CHECKLIST.md

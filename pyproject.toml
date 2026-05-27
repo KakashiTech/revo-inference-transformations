@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "revo"
+version = "0.1.0"
+description = "REVO — inference-time transformations for activation dynamics (CPU-only research prototype)"
+readme = "README.md"
+authors = [
+  { name = "REVO contributors" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+  "numpy>=1.21"
+]
+keywords = ["revo", "lora", "hyperlora", "llm", "inference", "modecache", "transformations"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Intended Audience :: Developers",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["revo*"]
+exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+python_files = ["test_*.py"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
+no_implicit_optional = true
+disallow_untyped_defs = true
+check_untyped_defs = false
+warn_unused_ignores = true
+exclude = [
+    "examples/",
+    "tests/",
+    ".venv/",
+]

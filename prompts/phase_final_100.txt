@@ -1,0 +1,104 @@
+Explain Landauer's principle in one sentence.
+Define reversible computing in AI.
+What is equilibrium propagation?
+Describe CauchyNet EinFields.
+Define topological Morse cancellation.
+Explain functor mapping to microcontrollers.
+How does PDM stochastic computing work?
+Describe adiabatic energy recovery.
+Why use torch.compile for inference?
+Synchronize Mass-Energy-Information for latency.
+What is an Oscillatory Neural Network?
+How do phase offsets affect interference?
+What is phase coherence?
+Define holomorphic substitution of weights.
+Explain Fourier-mode parametrization for MLPs.
+What is the advantage of rank-256 over rank-64?
+Why average logits across phase passes?
+What is mixture-of-softmax aggregation?
+How does malloc_trim help memory?
+Why call gc.collect between prompts?
+What does DecomputeManager do?
+Explain backward hook trimming.
+Why set use_cache to False in eval?
+What is the cost of logits O(T*V)?
+How can we reduce T safely?
+Why skip latency/energy on long runs?
+How do MKL/OMP threads affect CPU?
+What is the role of MDL penalty?
+Why L1 on coeffs and L2 on amplitudes?
+How many parameters remain at O(r)?
+Why avoid storing dense U and V?
+What is the effect of bias in holomorphic layer?
+How do we initialize coeffs?
+Why do we project W onto cosine bases?
+What risks exist in global substitution?
+Why start with top layers first?
+How do we pick patterns like h.11.mlp.c_proj?
+Why focus on c_proj over c_fc initially?
+What is the expected params_ratio target?
+What is acceptable nll_delta on 100 prompts?
+What is ΔRSS <= 0 requirement?
+How to measure RSS correctly?
+Why use torch.inference_mode on CPU?
+How to prevent allocator churn?
+Why compile kernels later in the flow?
+How do we verify functorial mapping?
+What is mean absolute diff in verification?
+How to measure interference cosine and KL?
+What is EP beta and its effect?
+How many EP steps are safe?
+What lr for holomorphic calibration?
+How many calibration steps are enough?
+Why randomize prompt order?
+Why keep prompts short?
+How to cap max_length?
+What is the safe osc passes range?
+What is a good dphi range?
+Why detach phases before averaging?
+Why restore base phases each pass?
+How to avoid phase drift?
+Why clamp probabilities before log?
+What is numerical stability concern?
+Explain the Landauer lower bound.
+How do total flops relate to energy?
+Why do we report energy tokens?
+What is dyn_energy_j?
+Why report latency percentiles?
+How to interpret latency CV?
+Why prefer CPU-only here?
+What is the goal of 4GB micro-hardware?
+Why use small rank for compression?
+When to increase rank?
+How to choose 4 vs 8 layers?
+What to do if nll worsens?
+How to trade rank vs passes?
+How to trade rank vs dphi?
+Why mixture aggregator helps memory?
+When prefer logits averaging?
+How to ensure reproducibility?
+Which seeds to use?
+Why set pad_token to eos_token?
+How to avoid KV cache growth?
+How to ensure immediate trimming?
+What is malloc_trim(0) side effect?
+When not to trim too often?
+How to log artifacts reliably?
+What JSON fields are critical?
+How to compute eval_time_ratio?
+What is energy_dyn_ratio?
+Why landauer_compiled_j changes?
+How to keep runs deterministic?
+Why ep steps can help stability?
+When to disable EP?
+How to split 100 prompts safely?
+Why set OMP_NUM_THREADS=1?
+Why set MKL_NUM_THREADS=1?
+Why set PYTORCH_NUM_THREADS=1?
+How to merge run artifacts?
+What thresholds confirm success?
+How to expand to 8 layers next?
+How to document checklist updates?
+What are the final acceptance criteria?
+How to share reproduction commands?
+Summarize key lessons from this run.
