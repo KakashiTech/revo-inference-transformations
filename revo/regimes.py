@@ -69,7 +69,7 @@ def _semantic_density_and_depth(
     topk: int,
 ) -> Tuple[float, float]:
     model.eval()
-    device = _device()
+    device = DEVICE
 
     densities: List[float] = []
     depths: List[float] = []
@@ -157,7 +157,7 @@ def evaluate_regimes(
     config: Optional[RegimeConfig] = None,
 ) -> Dict:
     cfg = config or RegimeConfig()
-    device = _device()
+    device = DEVICE
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token

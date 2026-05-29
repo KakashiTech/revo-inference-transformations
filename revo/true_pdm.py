@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from revo._utils import orient_weight, set_by_name, skip_tied_weights, iter_linear_modules
+from revo._utils import set_by_name, skip_tied_weights
 
 class PDMBitstream:
     """

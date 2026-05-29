@@ -56,10 +56,10 @@ def _nll_and_entropy(model, tok, texts: List[str], max_length: int, topk_eval: i
 
     for t in texts:
         enc = tok(t, return_tensors="pt", truncation=True, max_length=max_length)
-        input_ids = enc["input_ids"].to(_device())
+        input_ids = enc["input_ids"].to(DEVICE)
         attn = enc.get("attention_mask")
         if attn is not None:
-            attn = attn.to(_device())
+            attn = attn.to(DEVICE)
         out = model(input_ids=input_ids, attention_mask=attn, labels=input_ids)
         logits = out.logits  # [1, T, V]
         if tau is not None:
@@ -99,7 +99,7 @@ def _make_ood(prompts: List[str]) -> List[str]:
 def _fit_temperature(model, tok, texts: List[str], max_length: int, steps: int, lr: float) -> float:
     tau = torch.tensor(1.0, requires_grad=True)
     opt = torch.optim.SGD([tau], lr=lr)
-    device = _device()
+    device = DEVICE
     for _ in range(steps):
         opt.zero_grad()
         losses = []
@@ -133,7 +133,7 @@ def evaluate_probcal(
     if tok.pad_token_id is None:
         tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    model.to(_device())
+    model.to(DEVICE)
     model.eval()
 
     seed_reports = []

@@ -13,7 +13,10 @@ authors = [
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = [
-  "numpy>=1.21"
+  "numpy>=1.21",
+  "torch>=2.1",
+  "transformers>=4.35",
+  "psutil",
 ]
 keywords = ["revo", "lora", "hyperlora", "llm", "inference", "modecache", "transformations"]
 classifiers = [

@@ -16,7 +16,7 @@ from revo._utils import seed_everything, DEVICE
 
 def _encode(tok, text: str, max_len: int) -> Dict[str, torch.Tensor]:
     enc = tok(text, return_tensors="pt", truncation=True, max_length=max_len)
-    return {k: v.to(_device()) for k, v in enc.items()}
+    return {k: v.to(DEVICE) for k, v in enc.items()}
 
 
 def _entropy_from_logits(logits: torch.Tensor) -> float:
@@ -58,7 +58,7 @@ def _load_model_tok(model_name: str) -> Tuple[AutoModelForCausalLM, AutoTokenize
         tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name)
     model.eval()
-    model.to(_device())
+    model.to(DEVICE)
     return model, tok
 
 

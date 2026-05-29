@@ -13,8 +13,8 @@ import torch
 import torch.nn as nn
 
 from revo._logging import get_logger
-from revo._utils import seed_everything
-from revo.lowrank import LowRankLinear, set_by_name
+from revo._utils import seed_everything, set_by_name
+from revo.lowrank import LowRankLinear
 
 log = get_logger(__name__)
 

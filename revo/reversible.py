@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import gc
 import ctypes
-from revo._utils import orient_weight, set_by_name, skip_tied_weights, iter_linear_modules
+from revo._utils import set_by_name, skip_tied_weights
 
 
 def _orient_weight(module: nn.Module) -> Tuple[torch.Tensor, Optional[torch.Tensor], int, int]:
@@ -155,17 +155,6 @@ def replace_with_reversible(
 ) -> Dict[str, Tuple[int, int, int]]:
     pats = name_patterns or ["attn", "mlp", "c_fc", "c_proj"]
     report: Dict[str, Tuple[int, int, int]] = {}
-
-    def set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:
-        parts = path.split(".")
-        parent = root
-        for p in parts[:-1]:
-            parent = getattr(parent, p) if not p.isdigit() else getattr(parent, "_modules")[p]
-        last = parts[-1]
-        if last.isdigit():
-            parent._modules[last] = new_mod
-        else:
-            setattr(parent, last, new_mod)
 
     # Skip tied weights
     head_module = None

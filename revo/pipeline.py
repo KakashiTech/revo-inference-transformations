@@ -133,19 +133,16 @@ class PhaseRunner:
     @torch.no_grad()
     def phase5_energy(self, model, tokenizer, texts, max_len=128):
         base = _em(model, tokenizer, texts, max_len)
-        eg, ms, ml = _try("revo.energy"), _try("revo.mei_sync"), _try("revo.mlir_kernels")
-        if eg is None and ms is None:
+        eg, ml = _try("revo.energy"), _try("revo.mlir_kernels")
+        if eg is None:
             return {"name": "phase5_energy", "status": "skipped"}
         extra = {}
         try:
             c = self.cfg.get("phase5", {})
             if ml is not None and c.get("compile", False):
                 ml.compile_model_guarded(model)
-            if ms is not None:
-                extra["latency"] = ms.measure_latency_distribution(model, tokenizer, texts, max_length=max_len, warmup=c.get("warmup", 2), runs=c.get("runs", 5))
-            if eg is not None:
-                er = eg.measure_energy(model, tokenizer, texts, max_length=max_len)
-                extra["energy"] = {"total_flops": er.total_flops, "dyn_energy_j": er.dyn_energy_j, "landauer_lower_j": er.landauer_lower_j, "latency_s": er.latency_s, "tokens": er.tokens}
+            er = eg.measure_energy(model, tokenizer, texts, max_length=max_len)
+            extra["energy"] = {"total_flops": er.total_flops, "dyn_energy_j": er.dyn_energy_j, "landauer_lower_j": er.landauer_lower_j, "latency_s": er.latency_s, "tokens": er.tokens}
             return _pr("phase5_energy", base, _em(model, tokenizer, texts, max_len), extra=extra or None)
         except Exception as e:
             return {"name": "phase5_energy", "status": "error", "error": str(e)}

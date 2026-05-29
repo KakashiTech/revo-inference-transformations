@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from revo._utils import orient_weight, set_by_name, skip_tied_weights
+from revo._utils import set_by_name, skip_tied_weights
 
 def _orient_weight_bias(module: Any, out_hint: int | None = None, in_hint: int | None = None) -> tuple[torch.Tensor, torch.Tensor | None]:
     """Return (W_oriented, b) where W_oriented is [out, in] matching bias length or hints.
@@ -179,20 +179,6 @@ def replace_linear_with_lowrank(model: nn.Module, ranks: Dict[str, int], calibra
     """
     report: Dict[str, Tuple[int, int]] = {}
 
-    def set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:
-        parts = path.split(".")
-        parent = root
-        for p in parts[:-1]:
-            if p.isdigit():
-                parent = getattr(parent, "_modules")[p]  # ModuleList/Sequential index
-            else:
-                parent = getattr(parent, p)
-        last = parts[-1]
-        if last.isdigit():
-            parent._modules[last] = new_mod
-        else:
-            setattr(parent, last, new_mod)
-
     # Detect output embedding head to preserve weight tying (e.g., GPT-2 lm_head)
     head_module = None
     input_embed_weight = None
@@ -262,17 +248,6 @@ def replace_2d_modules_with_lowrank(
     - Accepts generic 2D-weight modules (e.g., GPT-2 Conv1D).
     """
     report: Dict[str, Tuple[int, int]] = {}
-
-    def set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:
-        parts = path.split(".")
-        parent = root
-        for p in parts[:-1]:
-            parent = getattr(parent, p) if not p.isdigit() else getattr(parent, "_modules")[p]
-        last = parts[-1]
-        if last.isdigit():
-            parent._modules[last] = new_mod
-        else:
-            setattr(parent, last, new_mod)
 
     # Detect tied components
     input_embed_weight = None

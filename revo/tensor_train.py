@@ -5,6 +5,8 @@ from typing import Dict, Tuple
 import torch
 import torch.nn as nn
 
+from revo._utils import set_by_name
+
 
 def _near_factors(n: int) -> Tuple[int, int]:
     a = int(torch.sqrt(torch.tensor(float(max(1, n))))).item()
@@ -53,20 +55,6 @@ class TT2Linear(nn.Module):
 @torch.no_grad()
 def replace_linear_with_tt2(model: nn.Module, ranks: Dict[str, int]) -> Dict[str, Tuple[int, int]]:
     report: Dict[str, Tuple[int, int]] = {}
-
-    def set_by_name(root: nn.Module, path: str, new_mod: nn.Module) -> None:
-        parts = path.split(".")
-        parent = root
-        for p in parts[:-1]:
-            if p.isdigit():
-                parent = getattr(parent, "_modules")[p]
-            else:
-                parent = getattr(parent, p)
-        last = parts[-1]
-        if last.isdigit():
-            parent._modules[last] = new_mod
-        else:
-            setattr(parent, last, new_mod)
 
     for name, m in model.named_modules():
         if name in ranks and isinstance(m, nn.Linear) and m.weight.dim() == 2:

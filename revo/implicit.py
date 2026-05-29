@@ -47,7 +47,7 @@ def _token_embeddings(model, tok, texts: List[str], max_length: int) -> torch.Te
     embs = []
     for t in texts:
         enc = tok(t, return_tensors="pt", truncation=True, max_length=max_length)
-        input_ids = enc["input_ids"].to(_device())
+        input_ids = enc["input_ids"].to(DEVICE)
         out = model(input_ids=input_ids, output_hidden_states=True, use_cache=False)
         hs = out.hidden_states  # tuple of [1, T, H]
         last = hs[-1][0]  # [T, H]
@@ -91,10 +91,10 @@ def _eval_nll(model, tok, texts: List[str], max_length: int) -> float:
     tokens = 0
     for t in texts:
         enc = tok(t, return_tensors="pt", truncation=True, max_length=max_length)
-        input_ids = enc["input_ids"].to(_device())
+        input_ids = enc["input_ids"].to(DEVICE)
         attn = enc.get("attention_mask")
         if attn is not None:
-            attn = attn.to(_device())
+            attn = attn.to(DEVICE)
         out = model(input_ids=input_ids, attention_mask=attn, labels=input_ids)
         loss = float(out.loss.item())
         tokens += int(input_ids.numel())
@@ -114,7 +114,7 @@ def evaluate_implicit(
     if tok.pad_token_id is None:
         tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    model.to(_device())
+    model.to(DEVICE)
     model.eval()
 
     seed_reports = []

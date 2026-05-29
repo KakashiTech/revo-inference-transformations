@@ -51,10 +51,10 @@ def _eval_nll(model, tok, texts: List[str], max_length: int) -> float:
     tokens = 0
     for t in texts:
         enc = tok(t, return_tensors="pt", truncation=True, max_length=max_length)
-        input_ids = enc["input_ids"].to(_device())
+        input_ids = enc["input_ids"].to(DEVICE)
         attn = enc.get("attention_mask")
         if attn is not None:
-            attn = attn.to(_device())
+            attn = attn.to(DEVICE)
         out = model(input_ids=input_ids, attention_mask=attn, labels=input_ids)
         loss = float(out.loss.item())
         tokens += int(input_ids.numel())
@@ -65,7 +65,7 @@ def _eval_nll(model, tok, texts: List[str], max_length: int) -> float:
 @torch.no_grad()
 def _hidden_metrics(model, tok, texts: List[str], max_length: int, act_q: float) -> Tuple[float, float]:
     # Returns (mean_active_fraction, mean_coherence)
-    device = _device()
+    device = DEVICE
     active_fracs: List[float] = []
     coherences: List[float] = []
     for t in texts:
@@ -110,7 +110,7 @@ def evaluate_biocomp(
     if tok.pad_token_id is None:
         tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    model.to(_device())
+    model.to(DEVICE)
     model.eval()
 
     seed_reports = []

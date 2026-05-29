@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from revo._utils import orient_weight, set_by_name, skip_tied_weights, iter_linear_modules
+from revo._utils import set_by_name, skip_tied_weights
 
 def _orient_weight_bias(module: nn.Module) -> Tuple[torch.Tensor, Optional[torch.Tensor], int, int, bool]:
     """Return (W_oriented, b, in_features, out_features, transposed)

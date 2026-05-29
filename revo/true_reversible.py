@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from revo._utils import orient_weight, set_by_name, skip_tied_weights, iter_linear_modules
+from revo._utils import set_by_name, skip_tied_weights
 
 KB = 1.380649e-23  # Boltzmann constant (J/K)
 DEFAULT_T_K = 300.0  # Room temperature

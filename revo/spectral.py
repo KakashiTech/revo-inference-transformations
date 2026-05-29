@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 import torch
 import torch.nn as nn
 
-from revo._utils import orient_weight, set_by_name, skip_tied_weights, iter_linear_modules
+from revo._utils import set_by_name, skip_tied_weights
 
 @torch.no_grad()
 def spectral_prune_tensor(W: torch.Tensor, energy_keep: float = 0.9) -> Tuple[torch.Tensor, int, int]:
