@@ -18,9 +18,9 @@ from revo.phase_bus import replace_with_phase_bus, calibrate_phase_bus
 from revo.reversible import replace_with_reversible, calibrate_reversible
 from revo.wdm import replace_with_wdm
 from revo.oscillatory_gating import OscillatoryHooks, interference_metrics, oscillatory_bptt_tune
-from revo.morse import morse_skeletonize
-from revo.mutual_information_fusion import mi_fuse_outputs
-from revo.low_dimensional import consolidate_lowdim
+from revo.archive.morse import morse_skeletonize
+from revo.archive.mutual_information_fusion import mi_fuse_outputs
+from revo.archive.low_dimensional import consolidate_lowdim
 
 
 def _texts_default() -> List[str]:

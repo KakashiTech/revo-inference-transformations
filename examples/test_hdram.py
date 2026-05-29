@@ -1,7 +1,7 @@
 """Test HDRAM — Holographic Random Access Memory."""
 import numpy as np
 
-from revo.hdram import HDRAM, HDRAMConfig, hypertoken_hash
+from revo.archive.hdram import HDRAM, HDRAMConfig, hypertoken_hash
 
 
 def test_exact_query():

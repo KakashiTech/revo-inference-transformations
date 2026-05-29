@@ -14,9 +14,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from revo._utils import count_parameters, evaluate_nll, free_memory_trim, measure_memory_rss
 from revo.hora import replace_with_hora
 from revo.holography import replace_with_holography, calibrate_holo_pinn
-from revo.morse import morse_skeletonize
-from revo.mutual_information_fusion import mi_fuse_outputs
-from revo.low_dimensional import consolidate_lowdim
+from revo.archive.morse import morse_skeletonize
+from revo.archive.mutual_information_fusion import mi_fuse_outputs
+from revo.archive.low_dimensional import consolidate_lowdim
 
 
 def _texts_default() -> List[str]:

@@ -5,7 +5,7 @@ import time
 
 import numpy as np
 
-from revo.hdram import HDRAM, HDRAMConfig
+from revo.archive.hdram import HDRAM, HDRAMConfig
 
 
 def main():

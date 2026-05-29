@@ -20,12 +20,12 @@ from revo.latency_monitor import measure_latency_distribution
 from revo.mlir_kernels import compile_model_guarded
 from revo.reversible import replace_with_reversible, calibrate_reversible, calibrate_reversible_mdl, DecomputeManager
 from revo.probabilistic_delta import pdm_eval_lm_head
-from revo.functor_monte_carlo import verify_functor_mapping
-from revo.spectral_network import replace_mlp_with_spectral
-from revo.morse import morse_skeletonize
+from revo.archive.functor_monte_carlo import verify_functor_mapping
+from revo.archive.spectral_network import replace_mlp_with_spectral
+from revo.archive.morse import morse_skeletonize
 from revo.equilibrium_propagation import equilibrium_propagation_tune
 from revo.holomorphic import replace_mlp_with_holomorphic, calibrate_holomorphic
-from revo.hyperbolic_gating import (
+from revo.archive.hyperbolic_gating import (
     solomonoff_mixed_nll,
     compositional_consistency,
     hyperbolic_profile,

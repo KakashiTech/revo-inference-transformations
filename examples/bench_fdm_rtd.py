@@ -7,7 +7,7 @@ import time
 import torch
 import torch.nn as nn
 
-from revo.fdm_rtd import FDMFilterBank
+from revo.archive.fdm_rtd import FDMFilterBank
 
 
 def main():

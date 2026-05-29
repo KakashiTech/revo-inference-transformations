@@ -2,7 +2,7 @@
 
 import torch
 
-from revo.fdm_rtd import FDMFilterBank
+from revo.archive.fdm_rtd import FDMFilterBank
 
 
 def test_fdm_forward_shape():

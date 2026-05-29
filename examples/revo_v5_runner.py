@@ -28,28 +28,28 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from revo._utils import evaluate_nll, free_memory_trim, measure_memory_rss
 
 # Import true implementations
-from revo.true_holomorphic import (
+from revo.archive.true_holomorphic import (
     replace_with_true_holomorphic, 
     calibrate_true_holomorphic,
     ComplexLinear,
     CauchyIntegralLayer
 )
-from revo.true_reversible import (
+from revo.archive.true_reversible import (
     replace_with_true_reversible,
     get_total_energy_report,
     ReversibleLinearLayer
 )
-from revo.physical_onn import (
+from revo.archive.physical_onn import (
     replace_with_physical_onn,
     evaluate_wave_inference,
     ONNLayer
 )
-from revo.true_pdm import (
+from revo.archive.true_pdm import (
     replace_with_pdm,
     measure_pdm_accuracy,
     PDMLinearLayer
 )
-from revo.functorial import (
+from revo.archive.functorial import (
     create_category_from_model,
     verify_functor_mapping
 )
