@@ -25,6 +25,7 @@ from revo._utils import encode_text, evaluate_nll, seed_everything
 from revo.act_svd import (
     replace_with_act_svd_compression,
     revert_act_svd_compression,
+    gradient_correct_compression,
 )
 
 try:
@@ -172,7 +173,44 @@ def run_test(model_name: str, method: str, ek: float, shared_ranks: Optional[Dic
             n_modules=len(handles), time_s=dt, model=model_name,
         )
 
+    elif method == "act_svd_grad":
+        handles = replace_with_act_svd_compression(
+            model, ranks,
+        )
+        calib = get_calib_texts(100)
+        handles = gradient_correct_compression(
+            model, handles, calib, tok,
+            max_length=MAX_LEN, steps=1, lr=3e-5, device=DEVICE,
+        )
+        dt = time.perf_counter() - t0
+        nll_comp = eval_nll(model, tok, texts)
+        params_after = count_weight_params(model)
+        revert_act_svd_compression(model, handles)
+        nll_revert = eval_nll(model, tok, texts)
+        return FusionResult(
+            method=method, energy_keep=ek,
+            nll_baseline=nll_base, nll_compressed=nll_comp,
+            nll_delta=nll_comp - nll_base,
+            nll_after_revert=nll_revert, revert_delta=abs(nll_revert - nll_base),
+            perfectly_restored=abs(nll_revert - nll_base) < 1e-8,
+            params_before=params_before, params_after=params_after,
+            compression_ratio=params_before / max(params_after, 1),
+            n_modules=len(handles), time_s=dt, model=model_name,
+        )
+
     raise ValueError(f"Unknown method: {method}")
+
+
+def get_calib_texts(n: int = 100) -> List[str]:
+    """Get calibration texts from wikitext for gradient correction."""
+    if load_dataset is not None:
+        try:
+            ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+            all_t = [ex["text"] for ex in ds if ex["text"].strip()]
+            return all_t[20:20 + n]  # Skip first 20 (used for eval)
+        except Exception:
+            pass
+    return CALIB_TEXTS
 
 
 def main():
@@ -184,7 +222,7 @@ def main():
         print("[gpt2 not available, skipping]")
 
     eks = [0.99, 0.95, 0.92, 0.85]
-    methods = ["naive_svd", "act_svd"]
+    methods = ["naive_svd", "act_svd", "act_svd_grad"]
 
     print("=" * 80)
     print("REVO FUSION: Activation-aware SVD + Module Replacement + Reversible Tails")
