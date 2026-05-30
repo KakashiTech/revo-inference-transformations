@@ -1,0 +1,40 @@
+{
+  "model": "llama.cpp:mistral-7b-v0.1.Q4_K_M.gguf",
+  "seeds": [
+    0
+  ],
+  "prompts": 20,
+  "max_length": 128,
+  "variants": [
+    {
+      "name": "baseline",
+      "nll_general": 4.313649606704712,
+      "nll_ood": 4.048733901977539,
+      "recon_cos": 1.0,
+      "recon_kl": 0.0,
+      "stability_cos": 1.0,
+      "stability_kl": 0.0,
+      "eval_time_s": 207.71189954800002,
+      "tokens_scored": 823,
+      "tokens_per_s": 3.9622188319057448,
+      "rss_peak_mb": 4560.85546875,
+      "cold_start_s": 21.099244952000163,
+      "warm_avg_s": 4.692727925999993
+    },
+    {
+      "name": "revo(tau=0.98)",
+      "nll_general": 4.300505042076111,
+      "nll_ood": 4.076183891296386,
+      "recon_cos": 1.0000000029802323,
+      "recon_kl": 0.0,
+      "stability_cos": 0.9999999642372132,
+      "stability_kl": 0.0,
+      "eval_time_s": 148.63167240400003,
+      "tokens_scored": 823,
+      "tokens_per_s": 5.537177821446966,
+      "rss_peak_mb": 4284.5078125,
+      "cold_start_s": 8.395156357999895,
+      "warm_avg_s": 4.0223067531579115
+    }
+  ]
+}
