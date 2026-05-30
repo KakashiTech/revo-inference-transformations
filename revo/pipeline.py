@@ -1,5 +1,6 @@
-"""PhaseRunner: consolidated pipeline orchestrator for REVO Phases I-V."""
+"""PhaseRunner: consolidated pipeline orchestrator for REVO Phases I-V + Ephemeral."""
 from __future__ import annotations
+from dataclasses import asdict
 from revo._logging import get_logger
 
 import argparse
@@ -13,6 +14,7 @@ from revo._utils import (
     count_parameters, evaluate_nll, gen_texts,
     load_model_tokenizer, measure_memory_rss, save_results_json,
 )
+from revo.ephemeral_engine import EphemeralConfig, EphemeralEngine
 
 
 def _em(model, tok, texts, max_len):
@@ -39,6 +41,42 @@ def _try(mod_name):
         return importlib.import_module(mod_name)
     except ImportError:
         return None
+
+
+@torch.no_grad()
+def _run_ephemeral_on_texts(model, tokenizer, texts, ecfg, max_len=128):
+    """Run ephemeral engine on texts. Modifies model per-token but reverts fully."""
+    device = next(model.parameters()).device
+    engine = EphemeralEngine(model, ecfg)
+
+    for text in texts:
+        engine.reset()
+        inp = tokenizer(text, return_tensors="pt", truncation=True, max_length=max_len)
+        ids = inp.input_ids.to(device)
+        slen = ids.shape[1]
+        if slen < 2:
+            continue
+
+        hs = model.transformer.wte(ids)
+        hs = hs + model.transformer.wpe(torch.arange(slen, device=device))
+        for block in model.transformer.h:
+            hs = block(hs)[0]
+        hs = model.transformer.ln_f(hs)
+
+        for pos in range(slen - 1):
+            h_pos = hs[0, pos]
+            logits_mod, meta = engine.step(h_pos, pos)
+            if logits_mod is not None:
+                logits_at = logits_mod
+                target = ids[0, pos + 1]
+                if logits_at.dim() == 1:
+                    logits_at = logits_at.unsqueeze(0)
+                logits_base = model(ids[:, :pos+1]).logits
+                nll_base = float(torch.nn.functional.cross_entropy(
+                    logits_base[0, -1].unsqueeze(0).float(), target.unsqueeze(0)))
+                nll_mod = float(torch.nn.functional.cross_entropy(
+                    logits_at.float(), target.unsqueeze(0)))
+                engine.record_nll_delta(nll_mod - nll_base)
 
 
 class PhaseRunner:
@@ -148,15 +186,52 @@ class PhaseRunner:
             return {"name": "phase5_energy", "status": "error", "error": str(e)}
 
     @torch.no_grad()
+    def phase_ephemeral(self, model, tokenizer, texts, max_len=128):
+        """Phase E: ciclo efímero completo con context encoder + gating + cache."""
+        base = _em(model, tokenizer, texts, max_len)
+        cfg = self.cfg.get("ephemeral", {})
+        ecfg = EphemeralConfig(
+            context_dim=cfg.get("context_dim", 16),
+            window_size=cfg.get("window_size", 4),
+            rank=cfg.get("rank", 4),
+            scale_min=cfg.get("scale_min", 0.0),
+            scale_max=cfg.get("scale_max", 0.8),
+            use_cache=cfg.get("use_cache", True),
+            cache_ttl=cfg.get("cache_ttl", 3600),
+            cache_max=cfg.get("cache_max", 128),
+            cache_similarity=cfg.get("cache_similarity", 0.92),
+            novelty_threshold=cfg.get("novelty_threshold", 0.3),
+            delta_window=cfg.get("delta_window", 3),
+            delta_window_threshold=cfg.get("delta_window_threshold", 0.02),
+            delta_window_scale_factor=cfg.get("delta_window_scale_factor", 0.3),
+        )
+        try:
+            _run_ephemeral_on_texts(model, tokenizer, texts, ecfg, max_len)
+            after = _em(model, tokenizer, texts, max_len)
+            return _pr("phase_ephemeral", base, after,
+                       extra={"ephemeral_config": asdict(ecfg)})
+        except Exception as e:
+            return {"name": "phase_ephemeral", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
     def run_all(self, model, tokenizer, texts_general, texts_ood=None, max_len=128):
         report = {"baseline": _em(model, tokenizer, texts_general, max_len)}
-        for phase, fn in [("phase1", self.phase1_metric_field), ("phase2", self.phase2_holography), ("phase3", self.phase3_spectral), ("phase4", self.phase4_fractal), ("phase5", self.phase5_energy)]:
+        phases = [
+            ("phase1", self.phase1_metric_field),
+            ("phase2", self.phase2_holography),
+            ("phase3", self.phase3_spectral),
+            ("phase4", self.phase4_fractal),
+            ("phase5", self.phase5_energy),
+            ("phase_ephemeral", self.phase_ephemeral),
+        ]
+        for phase, fn in phases:
             report[phase] = fn(model, tokenizer, texts_general, max_len)
         if texts_ood:
             report["ood_baseline"] = _em(model, tokenizer, texts_ood, max_len)
         completed = [k for k, v in report.items() if isinstance(v, dict) and v.get("status") == "completed"]
         skipped = [k for k, v in report.items() if isinstance(v, dict) and v.get("status") == "skipped"]
-        report["summary"] = {"phases_completed": completed, "phases_skipped": skipped, "total_phases": 5, "completed_count": len(completed)}
+        report["summary"] = {"phases_completed": completed, "phases_skipped": skipped,
+                             "total_phases": len(phases), "completed_count": len(completed)}
         return report
 
 
@@ -174,7 +249,7 @@ def run_pipeline_cli() -> None:
     path = save_results_json(report, default_dir="quality", prefix="pipeline", name=args.results_json or "")
     print(f"Pipeline results saved to {path}")
     print(f"\n{'─'*60}\n{'Phase':<20} {'Status':<12} {'NLL Δ':<14} {'Time ratio':<12} {'Params Δ':<12}\n{'─'*60}")
-    for key in ["phase1", "phase2", "phase3", "phase4", "phase5"]:
+    for key in ["phase1", "phase2", "phase3", "phase4", "phase5", "phase_ephemeral"]:
         p = report.get(key, {})
         nd = f"{p.get('nll_delta', 0):+.6e}" if p.get("nll_delta") is not None else "—"
         tr = f"{p.get('time_ratio', 1):.4f}×" if p.get("time_ratio") is not None else "—"

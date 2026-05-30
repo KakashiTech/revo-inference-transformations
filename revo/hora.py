@@ -96,10 +96,7 @@ def replace_with_hora(
         # Filter by patterns
         if not any(pat in name for pat in patterns):
             continue
-        # Only modules with 2D weight and optional bias
-        if not hasattr(m, "weight") or not isinstance(getattr(m, "weight"), torch.Tensor):
-            continue
-        if getattr(m, "weight").dim() != 2:
+        if not isinstance(m, nn.Linear):
             continue
         # Skip tied input embedding
         try:
@@ -109,7 +106,7 @@ def replace_with_hora(
             get_logger().warning("except Exception:")
         # Build adapter with inferred dims and replace
         W_o, b_o, in_f, out_f = _infer_oriented_weight(m)
-        adapter = HoRALinearAdapter(m, rank=rank, alpha=alpha, c=c, device=W_o.device, dtype=W_o.dtype)
+        adapter = HoRALinearAdapter(m, rank=rank, alpha=alpha, c=c, device=m.weight.device, dtype=m.weight.dtype)
         set_by_name(model, name, adapter)
         report[name] = (out_f, rank)
     return report

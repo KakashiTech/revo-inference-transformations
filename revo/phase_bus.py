@@ -84,18 +84,15 @@ def replace_with_phase_bus(
             continue
         if not any(p in name for p in pats):
             continue
-        if not hasattr(m, "weight") or not isinstance(getattr(m, "weight"), torch.Tensor):
-            continue
-        W = getattr(m, "weight")
-        if W.dim() != 2:
+        if not isinstance(m, nn.Linear):
             continue
         try:
-            if (input_embed_weight is not None) and (W is input_embed_weight):
+            if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
             get_logger().warning("except Exception:")
         in_f, out_f = _infer_in_out(m)
-        wrapper = PhaseBusWrap(m, in_features=in_f, out_features=out_f, device=W.device, dtype=W.dtype)
+        wrapper = PhaseBusWrap(m, in_features=in_f, out_features=out_f, device=m.weight.device, dtype=m.weight.dtype)
         set_by_name(model, name, wrapper)
         report[name] = (in_f, out_f)
     return report

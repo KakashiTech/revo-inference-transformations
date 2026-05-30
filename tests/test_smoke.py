@@ -28,7 +28,9 @@ CONFIRMED_SYMBOLS: dict[str, list[str]] = {
     "revo.equilibrium_propagation": ["equilibrium_propagation_tune"],
     "revo.engine": ["DeltaHandle", "apply_delta", "revert_delta"],
     "revo.mode_cache": ["ModeCache"],
-    "revo.pipeline": ["PhaseRunner"],
+    "revo.pipeline": ["PhaseRunner", "run_pipeline_cli"],
+    "revo.context_encoder": ["WindowContextEncoder", "EMAContextEncoder", "FourierContextEncoder"],
+    "revo.ephemeral_engine": ["EphemeralConfig", "EphemeralEngine"],
 }
 
 

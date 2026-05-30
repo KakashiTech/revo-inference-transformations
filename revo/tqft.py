@@ -40,10 +40,16 @@ class TopologicalProtector:
         ]
 
     def protect_logprobs(self, logits: torch.Tensor) -> torch.Tensor:
-        # logits: [V]
+        # logits: [V] or [B, V]
         logp = torch.log_softmax(logits, dim=-1)
         V = logp.shape[-1]
         K = min(self.cfg.topk, V)
+
+        # Handle both 1D and batched inputs uniformly
+        orig_ndim = logits.ndim
+        if orig_ndim == 1:
+            logp = logp.unsqueeze(0)
+
         vals, idx = torch.topk(logp, K, dim=-1)
 
         stacked = []
@@ -53,19 +59,28 @@ class TopologicalProtector:
             protected = torch.fft.irfft(rotated, n=K)
             stacked.append(protected)
 
-        stacked_t = torch.stack(stacked, dim=0)
-        agg_vals = torch.median(stacked_t, dim=0)[0]
+        stacked_t = torch.stack(stacked, dim=0)  # [num_braids, B, K]
+        agg_vals = torch.median(stacked_t, dim=0)[0]  # [B, K]
 
-        prob = torch.exp(logp).clone()
-        prob[idx] = torch.exp(agg_vals).to(prob.device, dtype=prob.dtype)
-        prob = prob / (prob.sum() + 1e-12)
-        return torch.log(prob + 1e-12)
+        prob = torch.exp(logp)  # [B, V]
+        prob = prob.scatter_(-1, idx, torch.exp(agg_vals).to(prob.device, dtype=prob.dtype))
+        prob = prob / (prob.sum(-1, keepdim=True) + 1e-12)
+
+        result = torch.log(prob + 1e-12)
+        if orig_ndim == 1:
+            result = result.squeeze(0)
+        return result
 
     def logical_error(self, logits: torch.Tensor) -> float:
         """Return variance across phase-rotated protections (lower = more stable)."""
         logp = torch.log_softmax(logits, dim=-1)
         V = logp.shape[-1]
         K = min(self.cfg.topk, V)
+
+        orig_ndim = logits.ndim
+        if orig_ndim == 1:
+            logp = logp.unsqueeze(0)
+
         vals, idx = torch.topk(logp, K, dim=-1)
 
         protected = []
@@ -75,7 +90,7 @@ class TopologicalProtector:
             pvals = torch.fft.irfft(rotated, n=K)
             protected.append(pvals)
 
-        stacked_t = torch.stack(protected, dim=0)
+        stacked_t = torch.stack(protected, dim=0)  # [num_braids, B, K]
         return float(torch.var(stacked_t, dim=0).mean().item())
 
 

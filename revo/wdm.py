@@ -59,6 +59,19 @@ class WDMLinearWrap(nn.Module):
                 c = nearest_circulant_first_column(W_block)
                 self.c_cols[bi].copy_(c)
 
+    @property
+    def weight(self) -> torch.Tensor:
+        """Reconstruct block-diagonal circulant matrix (for downstream compatibility)."""
+        B, S = self.c_cols.shape
+        N = B * S
+        dev = self.c_cols.device
+        idx = torch.arange(S, device=dev)
+        rows = (idx[:, None] - idx[None, :]) % S
+        blocks = []
+        for bi in range(B):
+            blocks.append(self.c_cols[bi][rows.long()])
+        return torch.block_diag(*blocks)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [..., N]
         N = self.features
@@ -110,13 +123,10 @@ def replace_with_wdm(
             continue
         if not any(p in name for p in pats):
             continue
-        if not hasattr(m, "weight") or not isinstance(getattr(m, "weight"), torch.Tensor):
-            continue
-        W = getattr(m, "weight")
-        if W.dim() != 2:
+        if not isinstance(m, nn.Linear):
             continue
         try:
-            if (input_embed_weight is not None) and (W is input_embed_weight):
+            if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
             get_logger().warning("except Exception:")

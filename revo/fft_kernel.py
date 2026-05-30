@@ -63,6 +63,14 @@ class CirculantLinear(nn.Module):
         if bias is not None and self.bias is not None:
             self.bias.copy_(bias)
 
+    @property
+    def weight(self) -> torch.Tensor:
+        """Reconstruct circulant matrix from first column c (for downstream compatibility)."""
+        n = self.features
+        idx = torch.arange(n, device=self.c.device)
+        rows = (idx[:, None] - idx[None, :]) % n
+        return self.c[rows.long()]
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [..., N]
         N = self.features
@@ -109,13 +117,10 @@ def replace_with_circulant(
             continue
         if not any(p in name for p in pats):
             continue
-        if not hasattr(m, "weight") or not isinstance(getattr(m, "weight"), torch.Tensor):
-            continue
-        W = getattr(m, "weight")
-        if W.dim() != 2:
+        if not isinstance(m, nn.Linear):
             continue
         try:
-            if (input_embed_weight is not None) and (W is input_embed_weight):
+            if (input_embed_weight is not None) and (m.weight is input_embed_weight):
                 continue
         except Exception:
             get_logger().warning("except Exception:")

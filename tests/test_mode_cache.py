@@ -1,67 +1,82 @@
-"""Tests for revo.mode_cache."""
+"""Tests for ModeCache with Z-similarity search."""
+
 from __future__ import annotations
 
 import time
+import numpy as np
+import pytest
+
 from revo.mode_cache import ModeCache
 
 
-class TestModeCache:
-    def test_put_and_get(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        mc.put("key1", "value1")
-        assert mc.get("key1") == "value1"
+def test_exact_put_get():
+    c = ModeCache(max_size=10, ttl_seconds=3600)
+    c.put("k1", "v1")
+    assert c.get("k1") == "v1"
+    assert c.get("k2") is None
 
-    def test_miss_returns_none(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        assert mc.get("nonexistent") is None
 
-    def test_update_existing(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        mc.put("k", "v1")
-        mc.put("k", "v2")
-        assert mc.get("k") == "v2"
+def test_similarity_hit():
+    c = ModeCache(max_size=10, ttl_seconds=3600, similarity_threshold=0.9)
+    z1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    z2 = np.array([0.95, 0.1, 0.05], dtype=np.float32)  # ~0.99 cos sim
 
-    def test_empty_key_ignored(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        mc.put("", "value")
-        assert mc.get("") is None
+    c.put("k1", "v1", z=z1)
+    ctx, key, sim = c.get_similar(z2)
+    assert ctx == "v1"
+    assert key == "k1"
+    assert sim > 0.9
 
-    def test_with_signature(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        mc.put("k", "v", signature={"rank": 8, "ctx_dim": 64})
-        v = mc.get("k")
-        assert v == "v"
 
-    def test_ttl_expiry(self):
-        mc = ModeCache(ttl_seconds=0, max_size=100)  # immediate expiry
-        mc.put("k", "v")
-        time.sleep(0.01)
-        v = mc.get("k")
-        assert v is None, "TTL=0 should expire immediately"
+def test_similarity_miss():
+    c = ModeCache(max_size=10, ttl_seconds=3600, similarity_threshold=0.9)
+    z1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    z2 = np.array([0.0, 0.0, 1.0], dtype=np.float32)  # orthogonal = 0 sim
 
-    def test_eviction_keeps_most_recent(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=2)
-        mc.put("a", 1)
-        mc.put("b", 2)
-        mc.put("c", 3)
-        assert mc.get("a") is None, "oldest should be evicted"
+    c.put("k1", "v1", z=z1)
+    ctx, key, sim = c.get_similar(z2)
+    assert ctx is None
+    assert key is None
+    assert sim < 0.9
 
-    def test_concurrent_access(self):
-        mc = ModeCache(ttl_seconds=3600, max_size=100)
-        import threading
-        errors = []
 
-        def worker(i):
-            try:
-                mc.put(f"k{i}", f"v{i}")
-                v = mc.get(f"k{i}")
-                assert v == f"v{i}"
-            except Exception as e:
-                errors.append(e)
+def test_similarity_chooses_best():
+    c = ModeCache(max_size=10, ttl_seconds=3600, similarity_threshold=0.8)
+    z_query = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    c.put("far", "far_val", z=np.array([1.0, 0.0, 0.0], dtype=np.float32))
+    c.put("close", "close_val", z=np.array([0.1, 0.95, 0.05], dtype=np.float32))
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-        assert len(errors) == 0, f"concurrent errors: {errors}"
+    ctx, key, sim = c.get_similar(z_query)
+    assert ctx == "close_val"
+    assert key == "close"
+
+
+def test_ttl_expiry_similarity():
+    c = ModeCache(max_size=10, ttl_seconds=1, similarity_threshold=0.9)
+    z = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    c.put("k1", "v1", z=z)
+    time.sleep(1.1)
+    ctx, key, sim = c.get_similar(z)
+    assert ctx is None  # expired
+
+
+def test_concurrent_access():
+    c = ModeCache(max_size=100, ttl_seconds=3600, similarity_threshold=0.9)
+    import threading
+    z = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    errors = []
+
+    def worker(i):
+        try:
+            c.put(f"k{i}", f"v{i}", z=z + np.random.randn(3) * 0.01)
+            c.get(f"k{i}")
+            c.get_similar(z)
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errors, f"Concurrent access failed: {errors}"

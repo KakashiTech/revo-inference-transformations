@@ -17,7 +17,7 @@ mañana:  reconstrucción efímera por token, campo cognitivo modulando la traye
          el disco como memoria lenta viva, el modelo que no pesa nada en RAM
 ```
 
-**Status:** research prototype — 9 phases implemented, CPU-only, 43 tests (pytest),
+**Status:** research prototype — 10 phases implemented, CPU-only, 234 tests (pytest),
 CI via GitHub Actions. All modules verified importable.
 
 This repo anchors the legitimacy of REVO as a technical line of work. It includes
@@ -214,6 +214,7 @@ revo/
 ├── probcal.py            # [VII] Temperature scaling (tau) via SGD
 ├── implicit.py           # [VIII] K-means codebook + distance threshold
 ├── biocomp.py            # [IX] Activation fraction, coherence, energy
+├── primitiva_router.py   # [X] Token-conditional computational primitive selection
 │
 ├── pipeline.py           # Orchestrator: runs all phases, collects metrics
 ├── unified_main.py       # Unified CLI entry point for all phases
@@ -223,7 +224,7 @@ revo/
 └── _utils.py             # Shared utilities (seed, NLL, module iteration)
 
 examples/                 # Runnable benchmarks and tests (15+ scripts)
-tests/                    # 43 pytest tests across 6 suites
+tests/                    # 234 pytest tests across 29 suites
 quality/                  # JSON artifacts (phase runs, comparisons, reports)
 ```
 
@@ -249,6 +250,7 @@ quality/                  # JSON artifacts (phase runs, comparisons, reports)
 | VII   | Probabilistic calibration | Verified |
 | VIII  | Implicit existence | Verified |
 | IX    | Bio-computational convergence | Verified |
+| X     | Primitiva Router (token-conditional) | Verified — 234 tests, GPT-2 support |
 
 ---
 
@@ -323,6 +325,7 @@ regímenes (micro/macro)               →  dualidad de existencia
 calibración probabilística (tau)      →  conocimiento ≠ expresión
 existencia implícita                  →  modelo como campo
 biocomputacional                      →  energía como restricción fundamental
+primitiva router (Φ por token)        →  cada token recibe la primitiva que necesita
 ```
 
 ---
@@ -338,12 +341,56 @@ biocomputacional                      →  energía como restricción fundamenta
 
 ---
 
+## Primitiva Router (Phase X)
+
+Cada token recibe la primitiva computacional que necesita. Un learned router
+(12–120 params por capa) selecciona per-token entre 5 primitivas con diferentes
+sesgos inductivos:
+
+| Primitiva | Coste | Cuándo se selecciona |
+|-----------|-------|----------------------|
+| Dense (O(n²)) | Matmul completo | Solo 1/8 capas (~76%) |
+| Circulant (O(n log n)) | FFT 1D | Atención → 30% |
+| WDM (O(n log n)) | FFT por bandas | Atención → 70% |
+| Holography | Bulk→Boundary→Bulk | Capas no-cuadradas |
+| LowRank | LoRA-style | Output projection → 100% |
+
+Hallazgo clave: tras entrenamiento en wikitext-2, el router **abandona dense**
+en 6/8 capas (0%). La mayoría del cómputo usa O(n log n) sin pérdida de calidad.
+
+```bash
+# Quick demo
+python -c "
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from revo import PrimitiveModel
+m = AutoModelForCausalLM.from_pretrained('sshleifer/tiny-gpt2')
+pm = PrimitiveModel(m, enabled=['dense','circulant','wdm','holography','lowrank'])
+print(pm.describe())
+"
+
+# Full experiment (400 steps, wikitext-2)
+python examples/exp_impressive.py
+
+# Sparse compute (top-k)
+python -c "
+from revo import PrimitiveModel
+pm = PrimitiveModel(model, top_k=2)  # solo 2 primitivas por token
+pm.set_top_k(1)  # o 1 en tiempo de inferencia
+"
+```
+
 ## próximos pasos
 
-1. **Error diffusion en QuantizedLinear** — mejora sobre min-max ya demostrada.
-2. **Campo cognitivo (Φ/A/C) experimental** — modulación de scales por contexto.
-3. **Ciclo efímero completo** — reconstruir subred por token, ejecutar, revertir.
-4. **Disco como memoria lenta** — handles REVO en disco, no en RAM.
+1. **Primitiva Router: sparse compute real** — top-k con gather/scatter vectorizado
+   para GPU. En CPU el overhead del scatter domina; en GPU con dims ≥768 da speedup 2–3×.
+2. **Entrenamiento conjunto** — primitivas + router en GPT-2 small (124M) con wikitext-103.
+   Hipótesis: el routing dinámico por token mejora PPL sobre denso estático.
+3. **Correlación lingüística** — ¿sustantivos eligen lowrank? ¿verbos eligen circulant?
+   Análisis POS con stanza/flair sobre el router entrenado.
+4. **Error diffusion en QuantizedLinear** — mejora sobre min-max ya demostrada.
+5. **Campo cognitivo (Φ/A/C) experimental** — modulación de scales por contexto.
+6. **Ciclo efímero completo** — reconstruir subred por token, ejecutar, revertir.
+7. **Disco como memoria lenta** — handles REVO en disco, no en RAM.
 
 ---
 

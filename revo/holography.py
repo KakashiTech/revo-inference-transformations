@@ -111,7 +111,7 @@ def replace_with_holography(
             continue
         if not any(pat in name for pat in patterns):
             continue
-        if not hasattr(m, "weight") or not isinstance(getattr(m, "weight"), torch.Tensor) or getattr(m, "weight").dim() != 2:
+        if not isinstance(m, nn.Linear):
             continue
         try:
             if (input_embed_weight is not None) and (m.weight is input_embed_weight):
