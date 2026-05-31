@@ -36,6 +36,10 @@ from .primitiva_router import (
     DensePrimitive, CirculantPrimitive, WDMPrimitive,
     HolographyPrimitive, LowRankPrimitive,
 )
+from .generative_law import (
+    GenerativeModel, GenerativeLayer, GenerativeLaw,
+    StructureDecoder, PrimitiveBank,
+)
 
 __all__ = [
     "HyperLoraConfig", "hyperlora_generate",
@@ -71,6 +75,8 @@ __all__ = [
     "PrimitiveModel", "PrimitiveRouter", "PrimitiveSelector",
     "DensePrimitive", "CirculantPrimitive", "WDMPrimitive",
     "HolographyPrimitive", "LowRankPrimitive",
+    "GenerativeModel", "GenerativeLayer", "GenerativeLaw",
+    "StructureDecoder", "PrimitiveBank",
 ]
 
 __version__ = "1.0.0"

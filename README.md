@@ -17,7 +17,7 @@ mañana:  reconstrucción efímera por token, campo cognitivo modulando la traye
          el disco como memoria lenta viva, el modelo que no pesa nada en RAM
 ```
 
-**Status:** research prototype — 10 phases implemented, CPU-only, 234 tests (pytest),
+**Status:** research prototype — 11 phases implemented, CPU-only, 261 tests (pytest),
 CI via GitHub Actions. All modules verified importable.
 
 This repo anchors the legitimacy of REVO as a technical line of work. It includes
@@ -215,6 +215,7 @@ revo/
 ├── implicit.py           # [VIII] K-means codebook + distance threshold
 ├── biocomp.py            # [IX] Activation fraction, coherence, energy
 ├── primitiva_router.py   # [X] Token-conditional computational primitive selection
+├── generative_law.py     # [XI] Generative Law — F(token) → 32-bit code → algebra
 │
 ├── pipeline.py           # Orchestrator: runs all phases, collects metrics
 ├── unified_main.py       # Unified CLI entry point for all phases
@@ -224,7 +225,7 @@ revo/
 └── _utils.py             # Shared utilities (seed, NLL, module iteration)
 
 examples/                 # Runnable benchmarks and tests (15+ scripts)
-tests/                    # 234 pytest tests across 29 suites
+tests/                    # 261 pytest tests across 31 suites
 quality/                  # JSON artifacts (phase runs, comparisons, reports)
 ```
 
@@ -251,6 +252,7 @@ quality/                  # JSON artifacts (phase runs, comparisons, reports)
 | VIII  | Implicit existence | Verified |
 | IX    | Bio-computational convergence | Verified |
 | X     | Primitiva Router (token-conditional) | Verified — 234 tests, GPT-2 support |
+| XI    | Generative Law (F: token → 32-bit code) | Verified — 261 tests, distilgpt2 support |
 
 ---
 
@@ -379,18 +381,42 @@ pm.set_top_k(1)  # o 1 en tiempo de inferencia
 "
 ```
 
+## Generative Law (Phase XI)
+
+Cada token genera su propia álgebra. F generativa mapea embedding → código de 32 bits
+via un pequeño MLP, y StructureDecoder aprende a proyectar el código a logits sobre
+primitivas + parámetros. El código es discreto (sigmoid + STE) pero diferenciable.
+
+Bit layout: 0-15 código latente, 16-19 scale, 20-23 temp, 24-31 reservado.
+
+```python
+from revo.generative_law import GenerativeModel
+
+model = AutoModelForCausalLM.from_pretrained('distilgpt2')
+gm = GenerativeModel(model, enabled=['dense','circulant','wdm','lowrank','holography'])
+codes = gm.collect_codes()  # 32-bit codes per token per layer
+```
+
+Hallazgos experimentales (distilgpt2 768-dim, wikitext-2):
+- **24 layers reemplazadas** con GenerativeLayers (41M params entrenables)
+- **Códigos clusterizables en ~8 categorías** (silhouette=0.43 con k=20)
+- **Códigos se diferencian por token**: "The" → wdm scale=4.0, "of" → circ scale=0.25
+- **PPL baseline=54 → 513** con base congelada (mejorable entrenando todo)
+
 ## próximos pasos
 
-1. **Primitiva Router: sparse compute real** — top-k con gather/scatter vectorizado
-   para GPU. En CPU el overhead del scatter domina; en GPU con dims ≥768 da speedup 2–3×.
-2. **Entrenamiento conjunto** — primitivas + router en GPT-2 small (124M) con wikitext-103.
-   Hipótesis: el routing dinámico por token mejora PPL sobre denso estático.
-3. **Correlación lingüística** — ¿sustantivos eligen lowrank? ¿verbos eligen circulant?
-   Análisis POS con stanza/flair sobre el router entrenado.
-4. **Error diffusion en QuantizedLinear** — mejora sobre min-max ya demostrada.
-5. **Campo cognitivo (Φ/A/C) experimental** — modulación de scales por contexto.
-6. **Ciclo efímero completo** — reconstruir subred por token, ejecutar, revertir.
-7. **Disco como memoria lenta** — handles REVO en disco, no en RAM.
+1. **Entrenamiento completo de GenerativeModel** — descongelar 41M params en distilgpt2
+   para que los códigos aprendan a mejorar PPL en vez de degradarla.
+2. **Clusterización post-hoc con POS tags** — correlacionar los ~8 clusters de códigos
+   con categorías lingüísticas (sustantivos, verbos, preposiciones, artículos).
+3. **Reducir overhead** — GenerativeModel es ~2× más lento que el forward original;
+   la proyección logits + softmax por capa domina en CPU.
+4. **Integrar sparse compute** — top-k routing sobre GenerativeLayers: solo ejecutar
+   top-2 primitivas por token.
+5. **Escalar a distilgpt2 completo (entrenamiento + clustering)** — 500+ steps,
+   POS correlation, análisis de códigos.
+6. **Campo cognitivo (Φ/A/C) experimental** — modulación de scales por contexto.
+7. **Ciclo efímero completo** — reconstruir subred por token, ejecutar, revertir.
 
 ---
 
