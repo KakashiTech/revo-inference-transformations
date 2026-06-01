@@ -1,20 +1,20 @@
-# REVO — el modelo que vive en el tiempo
+# REVO — the model that lives in time
 
-**REVO** (Reversible Execution Via reOrdering) no es una técnica de compresión.
-Es un cambio de definición: el modelo no es un archivo de pesos estáticos.
-Es una **ley de transformación reproducible** que existe en el tiempo como trayectoria causal.
+**REVO** (Reversible Execution Via reOrdering) is not a compression technique.
+It is a redefinition: the model is not a file of static weights.
+It is a **reproducible transformation law** that exists in time as a causal trajectory.
 
-La inferencia no es ejecución global de una red fija.
-Es **reconstrucción local bajo contexto**: la subred que necesitas para este token,
-generada efímeramente, ejecutada, revertida, olvidada.
+Inference is not global execution of a fixed network.
+It is **local reconstruction under context**: the subnetwork you need for this token,
+ephemerally generated, executed, reverted, forgotten.
 
-El modelo como fenómeno, no como cosa.
+The model as phenomenon, not as thing.
 
 ```
-hoy:     deltas reversibles + corrección por gradiente + cuantización lossless
-           ↓
-mañana:  reconstrucción efímera por token, campo cognitivo modulando la trayectoria,
-         el disco como memoria lenta viva, el modelo que no pesa nada en RAM
+today:    reversible deltas + gradient correction + lossless quantization
+            ↓
+tomorrow: ephemeral per-token reconstruction, cognitive field modulating the trajectory,
+          disk as slow living memory, the model that weighs nothing in RAM
 ```
 
 **Status:** research prototype — 11 phases implemented, CPU-only, 270 tests (pytest),
@@ -26,74 +26,74 @@ checks. No release yet.
 
 ---
 
-## la ruptura
+## The rupture
 
-El axioma de la industria es: el modelo es un objeto que debe vivir en RAM.
-De ahí viene todo — cuantización, poda, destilación. Sacrificar fidelidad para que
-quepa. Y aceptar que ese sacrificio es permanente.
+The industry axiom is: the model is an object that must live in RAM.
+From that comes everything — quantization, pruning, distillation. Sacrifice fidelity
+so it fits. And accept that the sacrifice is permanent.
 
-Eso es falso. Un modelo grande no necesita existir completo en ningún instante.
-Basta con que sea una trayectoria causal reproducible. Como el océano: no tienes
-todas las ondas en un punto, pero el océano se comporta coherentemente.
+That is false. A large model does not need to exist complete at any instant.
+It only needs to be a reproducible causal trajectory. Like the ocean: you don't have
+every wave at one point, but the ocean behaves coherently.
 
-REVO es ese cambio de paradigma.
-
----
-
-## el modelo como fenómeno (cuatro estratos)
-
-Un modelo REVO no es una pila de matrices. Es cuatro capas que nunca coexisten completas:
-
-```
-1. LEY GENERATIVA         CPU, RAM fija (MB)
-   Funciones compactas que generan deltas de pesos desde contexto latente.
-   Hyper-LoRA determinista: Z → (A, B, scale).
-
-2. CAMPO COGNITIVO Φ/A/C  RAM viva (KB-MB)
-   Valencia, arousal, coherencia. Decide qué reconstruir, con qué magnitud,
-   a qué velocidad. El campo modula la trayectoria en tiempo de inferencia.
-
-3. HISTORIA COMPRIMIDA    Disco (GB)
-   Potenciales, latentes, mapas de resonancia, trayectorias.
-   No weights.bin — mapas latentes, campos comprimidos, feromonas semánticas.
-
-4. MANIFESTACIÓN LOCAL     RAM efímera (KB)
-   Micro-subred reconstruida para este token/ventana. Se ejecuta, se revierte,
-   se destruye. Nunca existe más que un fragmento ínfimo del modelo a la vez.
-```
-
-El truco: **nunca existen 100% de los parámetros a la vez**.
-Lo que existe es la certeza de que, dado el contexto correcto,
-la reconstrucción será coherente.
+REVO is that paradigm shift.
 
 ---
 
-## la primitiva fundamental: el delta
+## The model as phenomenon (four strata)
 
-REVO no reemplaza pesos. REVO aplica **deltas** — perturbaciones low-rank
-reversibles. Cada delta captura una transformación, y puede ser revertido
-con pérdida estadísticamente indetectable (~3e-06).
-
-De esta primitiva nace todo:
+A REVO model is not a stack of matrices. It is four layers that never coexist complete:
 
 ```
-delta              →  cualquier transformación es reversible
-tail handle        →  la información descartada no se destruye, se guarda
-gradient correction →  la calidad perdida se recupera con backprop
-selección modular  →  solo reviertes lo que duele
+1. GENERATIVE LAW          CPU, fixed RAM (MB)
+   Compact functions that generate weight deltas from latent context.
+   Deterministic Hyper-LoRA: Z → (A, B, scale).
+
+2. COGNITIVE FIELD Φ/A/C   Living RAM (KB-MB)
+   Valence, arousal, coherence. Decides what to reconstruct, at what magnitude,
+   at what speed. The field modulates the trajectory at inference time.
+
+3. COMPRESSED HISTORY      Disk (GB)
+   Potentials, latents, resonance maps, trajectories.
+   No weights.bin — latent maps, compressed fields, semantic pheromones.
+
+4. LOCAL MANIFESTATION      Ephemeral RAM (KB)
+   Micro-subnetwork reconstructed for this token/window. Executed, reverted,
+   destroyed. Never more than a tiny fragment of the model exists at once.
 ```
 
-El ciclo completo:
+The trick: **100% of parameters never coexist**.
+What exists is the certainty that, given the right context,
+the reconstruction will be coherent.
 
-1. Comprimes (SVD truncation, cuantización, poda espectral)
-2. El handle guarda lo que descartaste (factores low-rank, pesos originales)
-3. Medís impacto en NLL
-4. Si duele → gradient correction o revert selectivo
-5. Si no duele → listo, el modelo vive comprimido pero eres libre de volver
+---
 
-Ninguna otra técnica puede hacer esto.
-GPTQ no puede. SparseGPT no puede. AWQ no puede.
-Todas destruyen permanentemente. REVO no.
+## The fundamental primitive: the delta
+
+REVO does not replace weights. REVO applies **deltas** — reversible low-rank
+perturbations. Each delta captures a transformation and can be reverted
+with statistically undetectable loss (~3e-06).
+
+From this primitive everything is born:
+
+```
+delta              →  any transformation is reversible
+tail handle        →  discarded information is not destroyed, it is saved
+gradient correction →  lost quality is recovered via backprop
+modular selection  →  you only revert what hurts
+```
+
+The full cycle:
+
+1. Compress (SVD truncation, quantization, spectral pruning)
+2. The handle saves what you discarded (low-rank factors, original weights)
+3. Measure impact on NLL
+4. If it hurts → gradient correction or selective revert
+5. If it doesn't hurt → done, the model lives compressed but you are free to go back
+
+No other technique can do this.
+GPTQ cannot. SparseGPT cannot. AWQ cannot.
+All destroy permanently. REVO does not.
 
 ---
 
@@ -127,29 +127,29 @@ logit diff ~12.46k. Confirms internal modulation without quantisation.
 
 ### SVD + gradient correction
 
-GPT-2 124M, wikitext-2, truncamiento al 25% del rango singular.
+GPT-2 124M, wikitext-2, truncation to 25% of singular value range.
 
 ```
-Config                                    ΔNLL      Compresión  Revertible
+Config                                    ΔNLL      Compression  Revertible
 ───────────────────────────────────────────────────────────────────────────
-SVD puro                                 +4.09      1.53×       ✅ 3e-06
-+ gradient correction (5 pasos AdamW)    +0.36      1.53×       ✅
-+ calibración separada (100 txts)        +2.01      1.53×       ✅
-safe_compress (revert selectivo)         +0.65      variable    ✅
+SVD pure                                 +4.09      1.53×       ✅ 3e-06
++ gradient correction (5 steps AdamW)    +0.36      1.53×       ✅
++ separate calibration (100 txts)        +2.01      1.53×       ✅
+safe_compress (selective revert)         +0.65      variable    ✅
 ```
 
-La corrección por gradiente cierra ~90% de la brecha de calidad.
+Gradient correction closes ~90% of the quality gap.
 
 ### QuantizedLinear 4-bit
 
-| Config               | ΔNLL      | Compresión  | Revertible |
+| Config               | ΔNLL      | Compression  | Revertible |
 |----------------------|-----------|-------------|------------|
 | 4-bit group=32       | −0.005*   | 8.0×        | ✅ 1e-08   |
 | 4-bit group=64       | +0.040    | 8.0×        | ✅         |
 | 3-bit group=32       | +0.345    | 10.7×       | ✅         |
 | 2-bit group=64       | +4.15     | 16.0×       | ✅         |
 
-*\* Mejora por regularización. 4-bit lossless.*
+*\* Improvement from regularization. 4-bit lossless.*
 
 ---
 
@@ -225,7 +225,7 @@ revo/
 └── _utils.py             # Shared utilities (seed, NLL, module iteration)
 
 examples/                 # Runnable benchmarks and tests (15+ scripts)
-tests/                    # 261 pytest tests across 31 suites
+tests/                    # 270 pytest tests across 31 suites
 quality/                  # JSON artifacts (phase runs, comparisons, reports)
 ```
 
@@ -251,12 +251,12 @@ quality/                  # JSON artifacts (phase runs, comparisons, reports)
 | VII   | Probabilistic calibration | Verified |
 | VIII  | Implicit existence | Verified |
 | IX    | Bio-computational convergence | Verified |
-| X     | Primitiva Router (token-conditional) | Verified — 234 tests, GPT-2 support |
+| X     | Primitive Router (token-conditional) | Verified — 234 tests, GPT-2 support |
 | XI    | Generative Law (F: token → 32-bit code) | Verified — 270 tests, modes: pure/residual, top-k sparse |
 
 ---
 
-## Reproducir (CPU-only)
+## Reproduce (CPU-only)
 
 ```bash
 # Install
@@ -309,56 +309,56 @@ is implemented in the HF/PyTorch path.
 
 ---
 
-## el camino hacia la visión
+## The path to the vision
 
-Cada primitiva apunta a un estrato de la visión:
+Each primitive points to a stratum of the vision:
 
 ```
-primitiva                             →  estrato
+primitive                             →  stratum
 ────────────────────────────────────────────────────────
-tail handle (información descartada)  →  potenciales en disco
-gradient correction                   →  campo cognitivo (Φ/A/C)
-QuantizedLinear                       →  subred reducida por token
-selective revert                      →  reconstruir-ejecutar-olvidar
-HyperLoRA (contexto → delta)          →  ley generativa determinista
-ModeCache (TTL/LRU)                   →  resonancia como caché
-Potentials (JSONL de latentes)        →  historia comprimida
-regímenes (micro/macro)               →  dualidad de existencia
-calibración probabilística (tau)      →  conocimiento ≠ expresión
-existencia implícita                  →  modelo como campo
-biocomputacional                      →  energía como restricción fundamental
-primitiva router (Φ por token)        →  cada token recibe la primitiva que necesita
+tail handle (discarded information)   →  potentials on disk
+gradient correction                   →  cognitive field (Φ/A/C)
+QuantizedLinear                       →  token-reduced subnetwork
+selective revert                      →  reconstruct-execute-forget
+HyperLoRA (context → delta)           →  deterministic generative law
+ModeCache (TTL/LRU)                   →  resonance as cache
+Potentials (JSONL of latents)         →  compressed history
+regimes (micro/macro)                 →  duality of existence
+probabilistic calibration (tau)       →  knowledge ≠ expression
+implicit existence                    →  model as field
+bio-computational                     →  energy as fundamental constraint
+primitive router (Φ per token)        →  each token gets the primitive it needs
 ```
 
 ---
 
-## límites
+## Limits
 
-- **CPU-only**. Sin GPU. Sondear, no competir.
-- **No gano en ratio de compresión puro**. GPTQ da 4× con ΔPPL +0.2.
-  REVO a 1.53× da ΔNLL +0.36. Mi fortaleza no es el ratio, es que puedes **volver**.
-- **Gradient correction necesita datos**. Linealmente. Sin atajos.
-- **La brecha visión-realidad es grande y real**. El ciclo completo de ejecución
-  efímera por token no existe como código. Existe como especificación.
+- **CPU-only**. No GPU. Probe, not compete.
+- **I do not win on raw compression ratio**. GPTQ gives 4× with ΔPPL +0.2.
+  REVO at 1.53× gives ΔNLL +0.36. My strength is not the ratio, it is that you can **revert**.
+- **Gradient correction needs data**. Linearly. No shortcuts.
+- **The gap between vision and reality is large and real**. The full ephemeral
+  per-token execution cycle does not exist as code. It exists as specification.
 
 ---
 
-## Primitiva Router (Phase X)
+## Primitive Router (Phase X)
 
-Cada token recibe la primitiva computacional que necesita. Un learned router
-(12–120 params por capa) selecciona per-token entre 5 primitivas con diferentes
-sesgos inductivos:
+Every token gets the computational primitive it needs. A learned router
+(12–120 params per layer) selects per-token between 5 primitives with different
+inductive biases:
 
-| Primitiva | Coste | Cuándo se selecciona |
-|-----------|-------|----------------------|
-| Dense (O(n²)) | Matmul completo | Solo 1/8 capas (~76%) |
-| Circulant (O(n log n)) | FFT 1D | Atención → 30% |
-| WDM (O(n log n)) | FFT por bandas | Atención → 70% |
-| Holography | Bulk→Boundary→Bulk | Capas no-cuadradas |
+| Primitive | Cost | When selected |
+|-----------|------|---------------|
+| Dense (O(n²)) | Full matmul | Only 1/8 layers (~76%) |
+| Circulant (O(n log n)) | FFT 1D | Attention → 30% |
+| WDM (O(n log n)) | Banded FFT | Attention → 70% |
+| Holography | Bulk→Boundary→Bulk | Non-square layers |
 | LowRank | LoRA-style | Output projection → 100% |
 
-Hallazgo clave: tras entrenamiento en wikitext-2, el router **abandona dense**
-en 6/8 capas (0%). La mayoría del cómputo usa O(n log n) sin pérdida de calidad.
+Key finding: after wikitext-2 training, the router **abandons dense**
+in 6/8 layers (0%). Most computation uses O(n log n) with no quality loss.
 
 ```bash
 # Quick demo
@@ -376,8 +376,8 @@ python examples/exp_impressive.py
 # Sparse compute (top-k)
 python -c "
 from revo import PrimitiveModel
-pm = PrimitiveModel(model, top_k=2)  # solo 2 primitivas por token
-pm.set_top_k(1)  # o 1 en tiempo de inferencia
+pm = PrimitiveModel(model, top_k=2)  # only 2 primitives per token
+pm.set_top_k(1)  # or 1 at inference time
 "
 ```
 
