@@ -299,3 +299,75 @@ class TestGenerativeModel:
         _ = gm(x)
         for name, code in gm.collect_codes().items():
             assert ((code == 0) | (code == 1)).all(), f"{name} codes not binary"
+
+    # ─── Mode tests ───────────────────────────────────────────────────────
+
+    def test_residual_mode_output_shape(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense"], mode="residual")
+        assert gm.mode == "residual"
+        x = torch.randn(2, 32)
+        out = gm(x)
+        assert out.shape == (2, 100)
+
+    def test_residual_mode_has_eps(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense"], mode="residual")
+        eps_count = sum(1 for n, p in gm.named_parameters() if "eps" in n)
+        assert eps_count > 0, "residual mode should have eps parameters"
+
+    def test_residual_mode_preserves_base(self, tiny_model):
+        """In residual mode, base model is stored per-layer."""
+        gm = GenerativeModel(tiny_model, enabled=["dense"], mode="residual")
+        for name, layer in gm._layers.items():
+            assert layer.orig is not None, f"{name} missing orig"
+            assert layer.eps is not None, f"{name} missing eps"
+
+    def test_pure_mode_no_orig(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense"], mode="pure")
+        for name, layer in gm._layers.items():
+            assert layer.orig is None, f"{name} should not have orig in pure mode"
+            assert layer.eps is None, f"{name} should not have eps in pure mode"
+
+    # ─── Top-k tests ──────────────────────────────────────────────────────
+
+    def test_top_k_shapes(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense", "lowrank"]).eval()
+        gm.set_top_k(1)
+        x = torch.randn(2, 32)
+        out1 = gm(x)
+        assert out1.shape == (2, 100)
+        assert torch.isfinite(out1).all()
+        # With k=2 (all) should match k=1 in shape
+        gm.set_top_k(2)
+        out2 = gm(x)
+        assert out2.shape == (2, 100)
+
+    def test_top_k_ignored_during_training(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense", "lowrank"]).train()
+        gm.set_top_k(1)  # Should be ignored in train mode
+        x = torch.randn(2, 32)
+        out = gm(x)
+        assert out.shape == (2, 100)
+
+    def test_generative_layer_top_k(self):
+        w = torch.randn(8, 8)
+        layer = GenerativeLayer(8, 8, w, torch.zeros(8),
+                                enabled=["dense", "lowrank", "wdm"])
+        layer.eval()
+        layer.set_top_k(2)
+        x = torch.randn(4, 8)
+        y = layer(x)
+        assert y.shape == (4, 8)
+        assert torch.isfinite(y).all()
+        layer.set_top_k(None)
+        y2 = layer(x)
+        assert y2.shape == (4, 8)
+
+    def test_top_k_stores_codes(self, tiny_model):
+        gm = GenerativeModel(tiny_model, enabled=["dense", "lowrank"]).eval()
+        gm.set_top_k(1)
+        x = torch.randn(2, 32)
+        _ = gm(x)
+        codes = gm.collect_codes()
+        assert len(codes) > 0
+        for c in codes.values():
+            assert c.shape[-1] == 32

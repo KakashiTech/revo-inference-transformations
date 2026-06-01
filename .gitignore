@@ -40,3 +40,5 @@ GRH.md
 docs/REVO_COMPUTE.md
 docs/adr/
 docs/EXTREME_REVO_CHECKLIST.md
+checkpoints/
+*.pt
