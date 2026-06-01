@@ -153,6 +153,39 @@ Gradient correction closes ~90% of the quality gap.
 
 ---
 
+## The killer use case: reversible fine-tuning safety
+
+Every ML team that fine-tunes large models knows this: you spend $10k on compute, the
+result is worse than the base, and you cannot go back. The only option is to re-download
+the original weights and start over.
+
+REVO makes this reversible:
+
+```bash
+# 1. Compress the model (you save the handle — a few MB)
+revo compress --model phi-3-mini --ratio 1.5
+# → NLL goes from 4.2 to 4.6, the handle stores the discarded information
+
+# 2. Fine-tune the compressed model
+python train.py --model phi-3-mini-revo
+
+# 3. Measure per-layer impact. If layer 17 got worse:
+revo revert-layer --layer 17
+# The tail handle restores the original precision. No re-download. No re-training.
+
+# 4. Or revert selectively — only the layers that degraded
+# Your fine-tune keeps 80% of the improvement, with 0% of the damage.
+```
+
+**No other technique can do this.** GPTQ, SparseGPT, AWQ destroy permanently. Once you
+quantize, the original information is gone. REVO preserves it — the tail handle is not
+metadata, it is the discarded algebra, kept available for the moment you need it back.
+
+This is a B2B product for any lab that pays for compute and cares about quality.
+The value is not compression. The value is **insurance against wasted fine-tunes**.
+
+---
+
 ## Architecture
 
 ```
@@ -259,18 +292,24 @@ quality/                  # JSON artifacts (phase runs, comparisons, reports)
 ## CLI
 
 ```bash
-# Compress a model with REVO safe compression
+# Compress a model with REVO safe compression (SVD + gradient correction + selective revert)
 revo compress --model sshleifer/tiny-gpt2 --ratio 1.5 --revert-on-delta 0.5
+
+# Compress + 4-bit quantization: compound compression with selective dequant
+revo compress --model sshleifer/tiny-gpt2 --ratio 1.5 --quantize --bits 4
 
 # Run all pipeline phases (I-V + X-XI)
 revo run --model sshleifer/tiny-gpt2 --prompts 5
 
 # Options:
-#   --model          Model name (any HF causal LM)
-#   --ratio          Target compression ratio (default 1.5)
+#   --model            Model name (any HF causal LM)
+#   --ratio            Target SVD compression ratio (default 1.5)
 #   --revert-on-delta  Revert modules if NLL delta exceeds this (default 0.5)
-#   --energy-keep    Energy threshold (auto from --ratio if omitted)
-#   --grad-steps     Gradient correction steps (default 3)
+#   --energy-keep      Energy threshold (auto from --ratio if omitted)
+#   --grad-steps       Gradient correction steps (default 3)
+#   --quantize         Apply int4 quantization after SVD compression
+#   --bits             Quantization bits: 2, 3, or 4 (default 4)
+#   --group-size       Quantization group size (default 128)
 ```
 
 ## Reproduce (CPU-only)

@@ -2,6 +2,7 @@
 
 Usage:
     revo compress --model <model> --ratio 1.5
+    revo compress --model <model> --quantize --bits 4
     revo run --model <model>
 """
 
@@ -12,7 +13,7 @@ import sys
 
 import torch
 
-from revo._utils import load_model_tokenizer, gen_texts, save_results_json
+from revo._utils import load_model_tokenizer, gen_texts, save_results_json, evaluate_nll
 
 
 def _energy_from_ratio(ratio: float) -> float:
@@ -29,13 +30,19 @@ def _add_common_args(p: argparse.ArgumentParser) -> None:
 def register_compress_subcommand(subparsers: argparse._SubParsersAction) -> None:
     p = subparsers.add_parser("compress", help="Compress model with REVO safe compression")
     _add_common_args(p)
-    p.add_argument("--ratio", type=float, default=1.5, help="Target compression ratio")
+    p.add_argument("--ratio", type=float, default=1.5, help="Target SVD compression ratio")
     p.add_argument("--energy-keep", type=float, default=None,
                    help="Energy threshold (default: auto from --ratio)")
     p.add_argument("--revert-on-delta", type=float, default=0.5,
                    help="Revert modules if NLL delta exceeds this")
     p.add_argument("--grad-steps", type=int, default=3,
                    help="Gradient correction steps")
+    p.add_argument("--quantize", action="store_true",
+                   help="Apply int4 quantization after SVD compression")
+    p.add_argument("--bits", type=int, default=4, choices=[2, 3, 4],
+                   help="Quantization bits (default 4)")
+    p.add_argument("--group-size", type=int, default=128,
+                   help="Quantization group size (default 128)")
     p.set_defaults(func=cmd_compress)
 
 
@@ -45,6 +52,8 @@ def cmd_compress(args: argparse.Namespace) -> None:
     print(f"╔══ REVO Compress ═══════════════════════════════════")
     print(f"║ Model:  {args.model}")
     print(f"║ Ratio:  {args.ratio}×  (revert Δ < {args.revert_on_delta})")
+    if args.quantize:
+        print(f"║ Quant:  {args.bits}-bit (group={args.group_size})")
 
     model, tokenizer = load_model_tokenizer(args.model)
     device = next(model.parameters()).device
@@ -72,14 +81,13 @@ def cmd_compress(args: argparse.Namespace) -> None:
     nll_delta_svd = result["nll_svd"] - result["nll_baseline"]
     nll_delta_corr = result["nll_corrected"] - result["nll_baseline"]
     print(f"║")
-    print(f"╠══ Results ═════════════════════════════════════════")
+    print(f"╠══ SVD Compression ═════════════════════════════════")
     print(f"║  Baseline NLL:       {result['nll_baseline']:.6f}")
     print(f"║  After SVD:          {result['nll_svd']:.6f}  (Δ={nll_delta_svd:+.6f})")
     print(f"║  After correction:   {result['nll_corrected']:.6f}  (Δ={nll_delta_corr:+.6f})")
     print(f"║  Final NLL:          {result['nll_final']:.6f}  (Δ={result['nll_delta_final']:+.6f})")
     print(f"║  Modules compressed: {len(result['compressed'])}")
     print(f"║  Modules reverted:   {len(result['reverted'])}")
-    print(f"╚════════════════════════════════════════════════════")
 
     report = {
         "command": "compress",
@@ -89,8 +97,54 @@ def cmd_compress(args: argparse.Namespace) -> None:
         "revert_on_delta": args.revert_on_delta,
         **{k: v for k, v in result.items() if k != "handles"},
     }
+
+    if args.quantize:
+        from revo.gptq_revo import quantize_all, selective_dequantize
+
+        nll_before_q = result["nll_final"]
+        print(f"║")
+        print(f"╠══ Quantization ══════════════════════════════════")
+        print(f"║  Quantizing to {args.bits}-bit (group={args.group_size})...")
+
+        q_handles = quantize_all(
+            model, texts, tokenizer,
+            max_length=args.max_length,
+            bits=args.bits,
+            group_size=args.group_size,
+            device=device,
+        )
+
+        nll_quantized = evaluate_nll(model, tokenizer, texts, max_length=args.max_length)
+        nll_delta_q = nll_quantized - nll_before_q
+        print(f"║  After quant:        {nll_quantized:.6f}  (Δ={nll_delta_q:+.6f})")
+
+        if nll_delta_q > args.revert_on_delta:
+            def eval_fn():
+                return evaluate_nll(model, tokenizer, texts, max_length=args.max_length)
+            q_handles, reverted_q = selective_dequantize(
+                model, q_handles, eval_fn, max_nll_delta=args.revert_on_delta,
+            )
+            nll_final_q = evaluate_nll(model, tokenizer, texts, max_length=args.max_length)
+            print(f"║  After SQ:           {nll_final_q:.6f}  (Δ={nll_final_q - nll_before_q:+.6f})")
+            print(f"║  Modules dequant:    {len(reverted_q)}")
+            report["quant_reverted"] = reverted_q
+            report["nll_after_quant"] = nll_final_q
+        else:
+            report["nll_after_quant"] = nll_quantized
+            report["quant_reverted"] = []
+
+        report["nll_before_quant"] = nll_before_q
+        report["quant_modules"] = len(q_handles)
+        report["quant_bits"] = args.bits
+        report["quant_group_size"] = args.group_size
+
+    print(f"╚════════════════════════════════════════════════════")
+
+    prefix = "compress"
+    if args.quantize:
+        prefix = f"compress_{args.bits}bit"
     path = save_results_json(report, default_dir="checkpoints/compress",
-                             prefix=f"compress_{args.ratio}x")
+                             prefix=prefix)
     print(f"\nResults: {path}")
 
 
