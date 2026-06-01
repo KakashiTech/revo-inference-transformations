@@ -129,12 +129,14 @@ def gen_texts(n: int) -> List[str]:
 def load_model_tokenizer(
     model_name: str,
     device: torch.device = DEVICE,
+    **kwargs: Any,
 ) -> Tuple[Any, Any]:
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tok_kwargs = {k: v for k, v in kwargs.items() if k != "torch_dtype"}
+    tokenizer = AutoTokenizer.from_pretrained(model_name, **tok_kwargs)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
     model.eval()
     model.to(device)
     return model, tokenizer
