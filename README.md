@@ -18,7 +18,7 @@ tomorrow: ephemeral per-token reconstruction, cognitive field modulating the tra
 ```
 
 **Status:** research prototype — 11 phases implemented, CPU-only, 270 tests (pytest),
-CI via GitHub Actions. Everything verified importable.
+CI via GitHub Actions, unified CLI (`revo compress`, `revo run`). Everything verified importable.
 
 This repo anchors the legitimacy of REVO as a technical line of work. It includes
 CPU-only evidence, JSON artifacts, and lightweight commands to reproduce small
@@ -217,8 +217,8 @@ revo/
 ├── primitiva_router.py   # [X] Token-conditional computational primitive selection
 ├── generative_law.py     # [XI] F(token) → 32-bit code → algebra (pure/residual/top-k)
 │
+├── cli.py                # Unified CLI: revo compress, revo run
 ├── pipeline.py           # Orchestrator: runs all phases, collects metrics
-├── unified_main.py       # Unified CLI entry point for all phases
 ├── archive/              # Archived experimental modules (15+)
 │
 ├── _logging.py           # Centralised logging configuration
@@ -251,10 +251,27 @@ quality/                  # JSON artifacts (phase runs, comparisons, reports)
 | VII   | Probabilistic calibration | Verified |
 | VIII  | Implicit existence | Verified |
 | IX    | Bio-computational convergence | Verified |
-| X     | Primitive Router (token-conditional) | Verified — 234 tests, GPT-2 support |
-| XI    | Generative Law (F: token → 32-bit code) | Verified — 270 tests, modes: pure/residual, top-k sparse |
+| X     | Primitive Router (token-conditional) | Verified — 234 tests, integrated in pipeline.py |
+| XI    | Generative Law (F: token → 32-bit code) | Verified — 270 tests, integrated in pipeline.py, modes: pure/residual, top-k sparse |
 
 ---
+
+## CLI
+
+```bash
+# Compress a model with REVO safe compression
+revo compress --model sshleifer/tiny-gpt2 --ratio 1.5 --revert-on-delta 0.5
+
+# Run all pipeline phases (I-V + X-XI)
+revo run --model sshleifer/tiny-gpt2 --prompts 5
+
+# Options:
+#   --model          Model name (any HF causal LM)
+#   --ratio          Target compression ratio (default 1.5)
+#   --revert-on-delta  Revert modules if NLL delta exceeds this (default 0.5)
+#   --energy-keep    Energy threshold (auto from --ratio if omitted)
+#   --grad-steps     Gradient correction steps (default 3)
+```
 
 ## Reproduce (CPU-only)
 
@@ -266,7 +283,7 @@ pip install -e .
 python -m pytest tests/ -v
 
 # Full pipeline (mock data)
-python examples/run_pipeline.py
+python examples/run_pipeline.py  # or: revo run --model sshleifer/tiny-gpt2 --prompts 5
 
 # CLI with a model
 python main.py --prompt "Explain low-rank inference."
