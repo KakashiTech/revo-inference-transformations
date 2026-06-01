@@ -1,4 +1,4 @@
-"""PhaseRunner: consolidated pipeline orchestrator for REVO Phases I-V + Ephemeral."""
+"""PhaseRunner: consolidated pipeline orchestrator for REVO Phases I-V + Ephemeral + X-XI."""
 from __future__ import annotations
 from dataclasses import asdict
 from revo._logging import get_logger
@@ -214,6 +214,62 @@ class PhaseRunner:
             return {"name": "phase_ephemeral", "status": "error", "error": str(e)}
 
     @torch.no_grad()
+    def phase10_primitiva_router(self, model, tokenizer, texts, max_len=128):
+        base = _em(model, tokenizer, texts, max_len)
+        pr = _try("revo.primitiva_router")
+        if pr is None:
+            return {"name": "phase10_primitiva_router", "status": "skipped"}
+        try:
+            cfg = self.cfg.get("phase10", {})
+            pm = pr.PrimitiveModel(
+                model,
+                enabled=cfg.get("enabled", None),
+                name_patterns=cfg.get("patterns", ["attn", "mlp", "c_fc", "c_proj"]),
+                router_temperature=cfg.get("temperature", 1.0),
+                router_hard=cfg.get("hard", True),
+                top_k=cfg.get("top_k", None),
+            )
+            after = _em(pm, tokenizer, texts, max_len)
+            extra = {"selector_count": len(pm._selectors),
+                     "primitives": pm.enabled}
+            return _pr("phase10_primitiva_router", base, after, extra=extra)
+        except Exception as e:
+            return {"name": "phase10_primitiva_router", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
+    def phase11_generative_law(self, model, tokenizer, texts, max_len=128):
+        base = _em(model, tokenizer, texts, max_len)
+        gl = _try("revo.generative_law")
+        if gl is None:
+            return {"name": "phase11_generative_law", "status": "skipped"}
+        try:
+            cfg = self.cfg.get("phase11", {})
+            gm = gl.GenerativeModel(
+                model,
+                enabled=cfg.get("enabled", None),
+                name_patterns=cfg.get("patterns", ["attn", "mlp", "c_fc", "c_proj"]),
+                mode=cfg.get("mode", "residual"),
+                law_hidden=cfg.get("law_hidden", 64),
+            )
+            top_k = cfg.get("top_k", None)
+            if top_k is not None:
+                gm.set_top_k(top_k)
+            after = _em(gm, tokenizer, texts, max_len)
+            codes = gm.collect_codes()
+            extra = {
+                "replaced_layers": len(gm._layers),
+                "mode": gm.mode,
+                "codes_collected": {n: list(c.shape) for n, c in codes.items()},
+                "codes_active_ratio": {
+                    n: (c.sum(dim=-1).float().mean().item() / c.shape[-1])
+                    for n, c in codes.items()
+                } if codes else {},
+            }
+            return _pr("phase11_generative_law", base, after, extra=extra)
+        except Exception as e:
+            return {"name": "phase11_generative_law", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
     def run_all(self, model, tokenizer, texts_general, texts_ood=None, max_len=128):
         report = {"baseline": _em(model, tokenizer, texts_general, max_len)}
         phases = [
@@ -223,6 +279,8 @@ class PhaseRunner:
             ("phase4", self.phase4_fractal),
             ("phase5", self.phase5_energy),
             ("phase_ephemeral", self.phase_ephemeral),
+            ("phase10", self.phase10_primitiva_router),
+            ("phase11", self.phase11_generative_law),
         ]
         for phase, fn in phases:
             report[phase] = fn(model, tokenizer, texts_general, max_len)
@@ -236,7 +294,7 @@ class PhaseRunner:
 
 
 def run_pipeline_cli() -> None:
-    ap = argparse.ArgumentParser(description="REVO Pipeline CLI (Phases I-V)")
+    ap = argparse.ArgumentParser(description="REVO Pipeline CLI (Phases I-V + X-XI)")
     ap.add_argument("--model", default="sshleifer/tiny-gpt2")
     ap.add_argument("--prompts", type=int, default=50)
     ap.add_argument("--max-length", type=int, default=128)
@@ -249,7 +307,7 @@ def run_pipeline_cli() -> None:
     path = save_results_json(report, default_dir="quality", prefix="pipeline", name=args.results_json or "")
     print(f"Pipeline results saved to {path}")
     print(f"\n{'─'*60}\n{'Phase':<20} {'Status':<12} {'NLL Δ':<14} {'Time ratio':<12} {'Params Δ':<12}\n{'─'*60}")
-    for key in ["phase1", "phase2", "phase3", "phase4", "phase5", "phase_ephemeral"]:
+    for key in ["phase1", "phase2", "phase3", "phase4", "phase5", "phase_ephemeral", "phase10", "phase11"]:
         p = report.get(key, {})
         nd = f"{p.get('nll_delta', 0):+.6e}" if p.get("nll_delta") is not None else "—"
         tr = f"{p.get('time_ratio', 1):.4f}×" if p.get("time_ratio") is not None else "—"
