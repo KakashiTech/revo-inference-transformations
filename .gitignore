@@ -21,6 +21,7 @@ models/
 
 # Generated / temp
 revo_compute.egg-info/
+svd_shards/
 .pytest_cache/
 .benchmarks/
 .venv/

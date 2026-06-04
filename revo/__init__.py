@@ -40,6 +40,17 @@ from .generative_law import (
     GenerativeModel, GenerativeLayer, GenerativeLaw,
     StructureDecoder, PrimitiveBank,
 )
+from .streaming import (
+    svd_shard_model, svd_stream_forward, svd_compare_memory,
+    shard_model, stream_forward, stream_generate, compare_memory,
+)
+from .law_streaming import (
+    WeightLaw, build_law, pretrain_law, finetune_law,
+    law_stream_forward, law_generate, law_compare_memory,
+    law_save, law_load, law_info,
+    _save_block_templates,
+    CognitiveField, FieldState, WeightModeCache,
+)
 
 __all__ = [
     "HyperLoraConfig", "hyperlora_generate",
@@ -77,6 +88,10 @@ __all__ = [
     "HolographyPrimitive", "LowRankPrimitive",
     "GenerativeModel", "GenerativeLayer", "GenerativeLaw",
     "StructureDecoder", "PrimitiveBank",
+    "WeightLaw", "build_law", "pretrain_law", "finetune_law",
+    "law_stream_forward", "law_generate", "law_compare_memory",
+    "law_save", "law_load", "law_info",
+    "CognitiveField", "FieldState", "WeightModeCache",
 ]
 
 __version__ = "1.0.0"

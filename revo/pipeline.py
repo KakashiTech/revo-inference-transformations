@@ -270,6 +270,195 @@ class PhaseRunner:
             return {"name": "phase11_generative_law", "status": "error", "error": str(e)}
 
     @torch.no_grad()
+    def phase12_streaming(self, model, tokenizer, texts, max_len=128):
+        """Phase XII: per-layer weight streaming from disk.
+        Compares full load vs streaming memory and NLL."""
+        import os
+        import tempfile
+        from revo.streaming import shard_model, compare_memory
+        base = _em(model, tokenizer, texts, max_len)
+        tmp = tempfile.mkdtemp(prefix="revo_shards_")
+        try:
+            shard_model(model, tmp)
+            report = compare_memory(model, tokenizer, tmp, texts, max_len)
+            r = {
+                "nll_full": report["full"]["nll"],
+                "nll_stream": report["streaming"]["nll"],
+                "nll_delta": report["streaming"]["nll_delta"],
+                "theoretical_savings_pct": report["theory"]["savings_pct"],
+                "full_weights_mb": report["theory"]["full_weights_mb"],
+                "stream_peak_weights_mb": report["theory"]["stream_peak_weights_mb"],
+                "time_ratio": report["streaming"]["time_ratio"],
+                "rss_peak_delta_mb": report["streaming"]["rss_peak_delta_mb"],
+            }
+            return _pr("phase12_streaming", base, _em(model, tokenizer, texts, max_len),
+                       extra=r)
+        except Exception as e:
+            return {"name": "phase12_streaming", "status": "error", "error": str(e)}
+        finally:
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def phase12b_law(self, model, tokenizer, texts, max_len=128):
+        """Phase XII-b: Generative WeightLaw streaming."""
+        from revo.law_streaming import (
+            build_law, pretrain_law, finetune_law,
+            _extract_svd_targets, law_info, _save_block_templates,
+            _eval_nll_law,
+        )
+        from revo.streaming import _eval_nll_full, _d_model
+        base = _em(model, tokenizer, texts, max_len)
+        try:
+            cfg = self.cfg.get("phase12b", {})
+            rank = cfg.get("rank", 64)
+            small_dim = cfg.get("small_dim", 32)
+            hidden_dim = cfg.get("hidden_dim", 512)
+            cognitive = cfg.get("cognitive", False)
+            cognitive_field = cfg.get("cognitive_field", False)
+
+            law = build_law(model, rank=rank, small_dim=small_dim,
+                            hidden_dim=hidden_dim, cognitive=cognitive,
+                            cognitive_field=cognitive_field)
+
+            if not cognitive_field:
+                targets = _extract_svd_targets(model, rank=rank)
+                pretrain_law(law, targets, steps=cfg.get("pretrain_steps", 100),
+                             lr=1e-3, verbose=False)
+
+            if cfg.get("finetune", True) and texts and not cognitive_field:
+                finetune_law(law, model, tokenizer, texts,
+                             steps=cfg.get("finetune_steps", 5),
+                             lr=5e-5, max_length=max_len, verbose=False)
+
+            info = law_info(law)
+
+            # Measure law metrics WITHOUT freeing model (saves _em at end)
+            templates = _save_block_templates(model)
+            from revo.streaming import _eval_nll_full, _free_all_block_weights
+
+            nll_full = _eval_nll_full(model, tokenizer, texts, max_len)
+            nll_law = _eval_nll_law(model, tokenizer, texts, law, max_len,
+                                    _templates=templates)
+            rss_peak = measure_memory_rss()
+
+            extra = {
+                "law_params": info["n_params"],
+                "law_mb": info["size_mb"],
+                "rank": info["rank"],
+                "law_nll": nll_law,
+                "law_nll_delta": nll_law - nll_full,
+                "full_nll": nll_full,
+                "law_rss_peak_mb": rss_peak / 1024 / 1024,
+            }
+            if hasattr(law, 'field') and law.field is not None:
+                with torch.no_grad():
+                    fs = law.field(torch.randn(1, 1, _d_model(model)))
+                    extra["field"] = {
+                        "phi": round(fs.phi.item(), 3),
+                        "arousal": round(fs.arousal.item(), 3),
+                        "coherence": round(fs.coherence.item(), 3),
+                        "uncertainty": round(fs.uncertainty.item(), 3),
+                        "active_03": len(fs.layers_to_generate(0.3)),
+                        "active_05": len(fs.layers_to_generate(0.5)),
+                    }
+            return _pr("phase12b_law", base, _em(model, tokenizer, texts, max_len),
+                       extra=extra)
+        except Exception as e:
+            return {"name": "phase12b_law", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
+    def phase12c_cognitive_field(self, model, tokenizer, texts, max_len=128):
+        """Phase XII-c: Cognitive Field + selective weight generation."""
+        from revo.law_streaming import (
+            build_law, law_generate, law_stream_forward,
+            _save_block_templates, _eval_nll_law,
+        )
+        from revo.streaming import _eval_nll_full, _free_all_block_weights
+        from revo.streaming import _d_model
+        base = _em(model, tokenizer, texts, max_len)
+        try:
+            cfg = self.cfg.get("phase12c", {})
+            rank = cfg.get("rank", 4)
+            hidden_dim = cfg.get("hidden_dim", 64)
+
+            law = build_law(model, rank=rank, small_dim=2,
+                            hidden_dim=hidden_dim,
+                            cognitive=True, cognitive_field=True)
+
+            # Evaluate field on first text
+            device = next(model.parameters()).device
+            sample_ids = tokenizer(texts[0] if texts else "hello",
+                                    return_tensors="pt", truncation=True,
+                                    max_length=max_len).input_ids.to(device)
+            from revo.streaming import _detect_arch, _extract_shared, _non_layer_pattern
+            arch = _detect_arch(model)
+            non_layer = _non_layer_pattern(arch)
+            state = model.state_dict(keep_vars=False)
+            shared = {k: v for k, v in state.items() if not non_layer.search(k)}
+            wte, wpe, _, _, _ = _extract_shared(shared, arch)
+            x = torch.nn.functional.embedding(sample_ids, wte.to(device))
+
+            field_state = law.field(x)
+            n_layers = law.layer_emb.shape[0]
+            extra = {
+                "phi": round(field_state.phi.item(), 3),
+                "arousal": round(field_state.arousal.item(), 3),
+                "coherence": round(field_state.coherence.item(), 3),
+                "uncertainty": round(field_state.uncertainty.item(), 3),
+                "scale": round(field_state.scale.item(), 3),
+                "active_03": len(field_state.layers_to_generate(0.3)),
+                "active_05": len(field_state.layers_to_generate(0.5)),
+                "active_07": len(field_state.layers_to_generate(0.7)),
+                "n_layers": n_layers,
+                "law_params": sum(p.numel() for p in law.parameters()),
+                "field_params": sum(p.numel() for p in law.field.parameters()),
+            }
+
+            # NLL comparison
+            nll_full = _eval_nll_full(model, tokenizer, texts, max_len)
+            nll_law = _eval_nll_law(model, tokenizer, texts, law, max_len)
+            extra["full_nll"] = nll_full
+            extra["law_nll"] = nll_law
+            extra["nll_delta"] = nll_law - nll_full
+
+            return _pr("phase12c_cognitive_field", base,
+                       _em(model, tokenizer, texts, max_len), extra=extra)
+        except Exception as e:
+            return {"name": "phase12c_cognitive_field", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
+    def phase12d_law_e2e(self, model, tokenizer, texts, max_len=128):
+        """Phase XII-d: End-to-end NLL training of the WeightLaw.
+        Trains law to produce weight deltas that improve NLL on wikitext.
+        """
+        base = _em(model, tokenizer, texts, max_len)
+        try:
+            from train_law_e2e import train_e2e
+            cfg = self.cfg.get("phase12d", {})
+            rank = cfg.get("rank", 16)
+            small_dim = cfg.get("small_dim", 8)
+            hidden_dim = cfg.get("hidden_dim", 256)
+            steps = cfg.get("steps", 500)
+            lr = cfg.get("lr", 3e-4)
+            lambda_kl = cfg.get("lambda_kl", 0.0)
+            max_samples = cfg.get("max_samples", 500)
+
+            result = train_e2e(
+                model_name=model.config._name_or_path if hasattr(model.config, '_name_or_path') else str(type(model).__name__),
+                rank=rank, small_dim=small_dim, hidden_dim=hidden_dim,
+                lr=lr, steps=steps, batch_size=cfg.get("batch_size", 2),
+                max_samples=max_samples, lambda_kl=lambda_kl,
+            )
+            return _pr("phase12d_law_e2e", base,
+                       _em(model, tokenizer, texts, max_len),
+                       extra={"status": "completed",
+                              "law_params": result.get("law_params", 0),
+                              "best_val_nll": result.get("best_val_nll", 0),
+                              "nll_delta": result.get("nll_delta", 0)})
+        except Exception as e:
+            return {"name": "phase12d_law_e2e", "status": "error", "error": str(e)}
+
+    @torch.no_grad()
     def run_all(self, model, tokenizer, texts_general, texts_ood=None, max_len=128):
         report = {"baseline": _em(model, tokenizer, texts_general, max_len)}
         phases = [
@@ -281,6 +470,10 @@ class PhaseRunner:
             ("phase_ephemeral", self.phase_ephemeral),
             ("phase10", self.phase10_primitiva_router),
             ("phase11", self.phase11_generative_law),
+            ("phase12", self.phase12_streaming),
+            ("phase12b", self.phase12b_law),
+            ("phase12c", self.phase12c_cognitive_field),
+            ("phase12d", self.phase12d_law_e2e),
         ]
         for phase, fn in phases:
             report[phase] = fn(model, tokenizer, texts_general, max_len)
@@ -307,7 +500,8 @@ def run_pipeline_cli() -> None:
     path = save_results_json(report, default_dir="quality", prefix="pipeline", name=args.results_json or "")
     print(f"Pipeline results saved to {path}")
     print(f"\n{'─'*60}\n{'Phase':<20} {'Status':<12} {'NLL Δ':<14} {'Time ratio':<12} {'Params Δ':<12}\n{'─'*60}")
-    for key in ["phase1", "phase2", "phase3", "phase4", "phase5", "phase_ephemeral", "phase10", "phase11"]:
+    for key in ["phase1", "phase2", "phase3", "phase4", "phase5", "phase_ephemeral",
+                 "phase10", "phase11", "phase12", "phase12b", "phase12c", "phase12d"]:
         p = report.get(key, {})
         nd = f"{p.get('nll_delta', 0):+.6e}" if p.get("nll_delta") is not None else "—"
         tr = f"{p.get('time_ratio', 1):.4f}×" if p.get("time_ratio") is not None else "—"
